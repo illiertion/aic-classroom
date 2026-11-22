@@ -1715,6 +1715,16 @@ export default function StudentRoom() {
                   선생님이 다시 시작하면 참여할 수 있습니다.
                 </Callout>
               ) : null}
+              {quiz.play === "meteor" ? (
+                <div className="flex items-center justify-between gap-2 rounded-xl bg-rose-50 px-3 py-2 text-[11.5px] font-bold text-rose-700 ring-1 ring-rose-200">
+                  <span>운석이 다가옵니다 · 정답을 서둘러 고르세요</span>
+                  <span className="flex gap-1 text-[18px]">
+                    <span className="animate-bounce">☄️</span>
+                    <span className="animate-bounce [animation-delay:150ms]">☄️</span>
+                    <span className="animate-bounce [animation-delay:300ms]">☄️</span>
+                  </span>
+                </div>
+              ) : null}
               {quiz.play === "scatter" || quiz.play === "order" ? (
                 <QuizTiles
                   quiz={quiz}
