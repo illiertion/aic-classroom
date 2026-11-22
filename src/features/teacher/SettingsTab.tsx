@@ -1,6 +1,6 @@
 ﻿import { useEffect, useState } from "react";
 import type { ClientMessage } from "../../../shared/protocol";
-import { DEFAULT_SETTINGS, SEAT_RULES, type ClassSettings } from "../../../shared/settings";
+import { DEFAULT_SETTINGS, MINI_GAME_IDS, MINI_GAME_LABEL, MINI_ROUND_HINT, SEAT_RULES, type ClassSettings } from "../../../shared/settings";
 import { Button, Callout, Card, CardHeader, Divider, Field, Input, Textarea, Toggle } from "../../components/ui";
 import { IconAlert, IconCheck, IconRefresh } from "../../components/Icons";
 
@@ -196,6 +196,75 @@ export function SettingsTab({ settings, send, connected }: Props) {
                 />
               </div>
             ))}
+          </div>
+        </Card>
+
+        <Card className="p-5 lg:col-span-2">
+          <CardHeader
+            title="미니게임 규칙"
+            description="미니게임마다 라운드 수와 제한시간을 정합니다. 값은 서버가 그대로 적용합니다."
+          />
+          <div className="mt-4 overflow-x-auto">
+            <table className="w-full min-w-[420px] text-left">
+              <thead>
+                <tr className="text-[11px] text-slate-400">
+                  <th className="pb-2 font-semibold">게임</th>
+                  <th className="pb-2 font-semibold">라운드</th>
+                  <th className="pb-2 font-semibold">제한시간(초)</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {MINI_GAME_IDS.map((id) => (
+                  <tr key={id}>
+                    <td className="py-2 pr-3">
+                      <p className="text-[12.5px] font-semibold text-slate-800">{MINI_GAME_LABEL[id]}</p>
+                      <p className="text-[10.5px] text-slate-400">{MINI_ROUND_HINT[id]}</p>
+                    </td>
+                    <td className="py-2 pr-3">
+                      <Input
+                        type="number"
+                        min={1}
+                        max={50}
+                        value={String(draft.miniRules[id]?.rounds ?? 1)}
+                        onChange={(event) =>
+                          set("miniRules", {
+                            ...draft.miniRules,
+                            [id]: {
+                              rounds: Math.max(1, Math.min(50, Number(event.target.value) || 1)),
+                              seconds: draft.miniRules[id]?.seconds ?? 0,
+                            },
+                          })
+                        }
+                        className="h-8 w-20 text-[12px]"
+                        aria-label={`${MINI_GAME_LABEL[id]} 라운드`}
+                      />
+                    </td>
+                    <td className="py-2">
+                      <div className="flex items-center gap-1.5">
+                        <Input
+                          type="number"
+                          min={0}
+                          max={900}
+                          value={String(draft.miniRules[id]?.seconds ?? 0)}
+                          onChange={(event) =>
+                            set("miniRules", {
+                              ...draft.miniRules,
+                              [id]: {
+                                rounds: draft.miniRules[id]?.rounds ?? 1,
+                                seconds: Math.max(0, Math.min(900, Number(event.target.value) || 0)),
+                              },
+                            })
+                          }
+                          className="h-8 w-20 text-[12px]"
+                          aria-label={`${MINI_GAME_LABEL[id]} 제한시간`}
+                        />
+                        <span className="text-[10.5px] text-slate-400">0 = 없음</span>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </Card>
 

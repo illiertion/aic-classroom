@@ -213,6 +213,8 @@ export interface SpeedTapScore {
 export interface SpeedTapState {
   kind: "speedtap";
   round: number;
+  /** 수업 설정에서 정한 전체 라운드 수. */
+  totalRounds?: number;
   size: number;
   target: number;
   startsAt: number;
@@ -327,6 +329,10 @@ export interface LiveQuiz {
   endsAt: number | null;
   /** 'notice'면 학생 알림 영역에 작은 문제로 표시됩니다. */
   surface: "quiz" | "notice";
+  /** 학생이 답을 만드는 방식: 일반 선택 · 글자 조립 · 순서 배열 · 운석. */
+  play: "plain" | "scatter" | "order" | "meteor";
+  /** 조립형(scatter·order)에서 학생에게 보여 줄 타일. */
+  tiles: string[];
   /** 짝 연결(connect) 문제의 왼쪽 항목. 오른쪽은 섞여서 내려갑니다. */
   lefts: string[];
   rights: string[];
@@ -697,6 +703,8 @@ export type ClientMessage =
       pairs?: QuizPair[];
       /** 'notice'면 프로젝터 없이 알림으로 보냅니다. */
       surface?: "quiz" | "notice";
+      /** 학생이 답을 만드는 방식. */
+      play?: "plain" | "scatter" | "order" | "meteor";
     }
   | { type: "quiz_close" }
   | { type: "game_reset" }

@@ -50,7 +50,52 @@ export interface ClassSettings {
   soundEnabled: boolean;
   /** 자리 뽑기 규칙: 무작위 · 이름순 · 입장순 · 모둠별 */
   seatRule: SeatRule;
+  /** 미니게임별 라운드 수·제한시간. */
+  miniRules: MiniRules;
 }
+
+/** 미니게임(사다리·폭탄·단어찾기·기억력·순발력·자모·룰렛) 공통 규칙. */
+export type MiniRules = Record<string, { rounds: number; seconds: number }>;
+
+export const MINI_GAME_IDS = [
+  "wordsearch",
+  "memory",
+  "jamo",
+  "speedtap",
+  "bomb",
+  "ladder",
+  "roulette",
+] as const;
+
+export const MINI_GAME_LABEL: Record<string, string> = {
+  wordsearch: "가로세로 단어찾기",
+  memory: "카드 짝 맞추기",
+  jamo: "자모 낱말 만들기",
+  speedtap: "순발력 숫자 찾기",
+  bomb: "폭탄 돌리기",
+  ladder: "사다리 타기",
+  roulette: "룰렛 뽑기",
+};
+
+export const MINI_ROUND_HINT: Record<string, string> = {
+  wordsearch: "찾을 단어 수",
+  memory: "짝 수",
+  jamo: "낱말 수",
+  speedtap: "판 수",
+  bomb: "폭탄 개수",
+  ladder: "사다리 수",
+  roulette: "뽑을 인원",
+};
+
+export const DEFAULT_MINI_RULES: MiniRules = {
+  wordsearch: { rounds: 5, seconds: 120 },
+  memory: { rounds: 6, seconds: 120 },
+  jamo: { rounds: 4, seconds: 90 },
+  speedtap: { rounds: 3, seconds: 60 },
+  bomb: { rounds: 3, seconds: 20 },
+  ladder: { rounds: 3, seconds: 0 },
+  roulette: { rounds: 1, seconds: 0 },
+};
 
 /** 자리 뽑기에 쓰는 규칙. */
 export type SeatRule = "random" | "name" | "joined" | "team";
@@ -83,6 +128,7 @@ export const DEFAULT_SETTINGS: ClassSettings = {
   timerMinutes: 5,
   soundEnabled: true,
   seatRule: "random",
+  miniRules: DEFAULT_MINI_RULES,
 };
 
 function text(value: unknown, maxLength: number, fallback: string): string {
@@ -102,6 +148,20 @@ function flag(value: unknown, fallback: boolean): boolean {
 
 function seatRule(value: unknown, fallback: SeatRule): SeatRule {
   return SEAT_RULES.some((rule) => rule.id === value) ? (value as SeatRule) : fallback;
+}
+
+function miniRules(value: unknown, fallback: MiniRules): MiniRules {
+  const raw = value && typeof value === "object" ? (value as Record<string, unknown>) : {};
+  const next: MiniRules = {};
+  for (const id of MINI_GAME_IDS) {
+    const base = fallback[id] ?? DEFAULT_MINI_RULES[id] ?? { rounds: 3, seconds: 60 };
+    const entry = raw[id] && typeof raw[id] === "object" ? (raw[id] as Record<string, unknown>) : {};
+    next[id] = {
+      rounds: num(entry.rounds, 1, 50, base.rounds),
+      seconds: num(entry.seconds, 0, 900, base.seconds),
+    };
+  }
+  return next;
 }
 
 /** 어떤 입력이 와도 안전한 설정으로 바꿉니다(부분 patch 허용). */
@@ -129,6 +189,7 @@ export function normalizeSettings(input: unknown): ClassSettings {
     timerMinutes: num(raw.timerMinutes, 1, 120, defaults.timerMinutes),
     soundEnabled: flag(raw.soundEnabled, defaults.soundEnabled),
     seatRule: seatRule(raw.seatRule, defaults.seatRule),
+    miniRules: miniRules(raw.miniRules, defaults.miniRules),
   };
 }
 

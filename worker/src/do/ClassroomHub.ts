@@ -115,6 +115,8 @@ interface QuizRow {
   game_mode: string;
   pairs_json: string | null;
   surface: string | null;
+  play: string | null;
+  tiles_json: string | null;
 }
 
 interface AnswerRow {
@@ -436,6 +438,8 @@ const COLUMN_MIGRATIONS = [
   "ALTER TABLE quiz ADD COLUMN surface TEXT NOT NULL DEFAULT 'quiz'",
   "ALTER TABLE board_cards ADD COLUMN pos_x INTEGER",
   "ALTER TABLE board_cards ADD COLUMN pos_y INTEGER",
+  "ALTER TABLE quiz ADD COLUMN play TEXT",
+  "ALTER TABLE quiz ADD COLUMN tiles_json TEXT",
 ];
 
 const GAME_ITEM_KINDS: ReadonlySet<string> = new Set(["double", "steal", "bonus"]);
@@ -759,6 +763,10 @@ export class ClassroomHub extends DurableObject<Env> {
         }
         const id = randomId("quiz_");
         const surface = data.surface === "notice" ? "notice" : "quiz";
+        const play: "plain" | "scatter" | "order" | "meteor" =
+          data.play === "scatter" || data.play === "order" || data.play === "meteor" ? data.play : "plain";
+        // 조립형 게임은 정답 글자·낱말을 섞어서 타일로 내려줍니다.
+        const tiles = this.buildTiles(play, mode, correctText, options, correctOption);
         const gameMode: GameMode = GAME_MODES.has(String(data.gameMode))
           ? (data.gameMode as GameMode)
           : "classic";
@@ -791,8 +799,8 @@ export class ClassroomHub extends DurableObject<Env> {
         this.setConfig("game_lobby", "0");
         this.run(
           `INSERT INTO quiz
-            (id, prompt, mode, options_json, correct_option, correct_text, status, started_at, closed_at, round, duration_sec, ends_at, game_mode, pairs_json, surface)
-           VALUES (?, ?, ?, ?, ?, ?, 'open', ?, NULL, ?, ?, ?, ?, ?, ?)`,
+            (id, prompt, mode, options_json, correct_option, correct_text, status, started_at, closed_at, round, duration_sec, ends_at, game_mode, pairs_json, surface, play, tiles_json)
+           VALUES (?, ?, ?, ?, ?, ?, 'open', ?, NULL, ?, ?, ?, ?, ?, ?, ?, ?)`,
           id,
           prompt,
           mode,
@@ -806,6 +814,8 @@ export class ClassroomHub extends DurableObject<Env> {
           gameMode,
           pairs.length ? JSON.stringify(pairs) : null,
           surface,
+          play,
+          JSON.stringify(tiles),
         );
         this.setConfig("total_rounds", String(totalRounds));
         this.broadcastQuiz();
@@ -1757,11 +1767,15 @@ export class ClassroomHub extends DurableObject<Env> {
       return;
     }
     const holder = randomOf(players)!;
+    const rules = this.miniRulesOf("bomb");
     const now = Date.now();
     const state: BombState = {
       kind: "bomb",
       startedAt: now,
-      endsAt: now + randomBetween(BOMB_MIN_MS, BOMB_MAX_MS),
+      endsAt:
+        rules.seconds > 0
+          ? now + rules.seconds * 1000
+          : now + randomBetween(BOMB_MIN_MS, BOMB_MAX_MS),
       holder: { participantId: holder.participantId, name: holder.name },
       status: "running",
       loserName: null,
@@ -1819,8 +1833,19 @@ export class ClassroomHub extends DurableObject<Env> {
     return words;
   }
 
+  /** 수업 설정에 저장된 미니게임 규칙(라운드 수·제한시간). */
+  private miniRulesOf(id: string): { rounds: number; seconds: number } {
+    const rules = this.settings().miniRules ?? {};
+    const rule = rules[id];
+    return {
+      rounds: Math.max(1, Math.min(50, Math.round(Number(rule?.rounds) || 3))),
+      seconds: Math.max(0, Math.min(900, Math.round(Number(rule?.seconds) || 0))),
+    };
+  }
+
   private startWordSearch(raw: unknown): void {
-    const words = this.sanitizeWords(raw);
+    const rules = this.miniRulesOf("wordsearch");
+    const words = this.sanitizeWords(raw).slice(0, rules.rounds);
     if (words.length < 2) {
       this.sendToTeachers({
         type: "notice",
@@ -1857,7 +1882,8 @@ export class ClassroomHub extends DurableObject<Env> {
   }
 
   private startMemory(raw: unknown): void {
-    const words = this.sanitizeWords(raw);
+    const rules = this.miniRulesOf("memory");
+    const words = this.sanitizeWords(raw).slice(0, Math.max(2, rules.rounds));
     const labels = words.length >= 2 ? words : ["사과", "바나나", "포도", "딸기"];
     const cards: MemoryCard[] = [];
     labels.forEach((label, index) => {
@@ -2011,7 +2037,7 @@ export class ClassroomHub extends DurableObject<Env> {
       });
       return;
     }
-    this.beginSpeedTapRound(size, 1, []);
+    this.beginSpeedTapRound(size, 1, [], Math.max(1, this.miniRulesOf("speedtap").rounds));
     this.sendNoticeToAll("⏱ 반응 속도 대결! 두더지가 나타나면 가장 빠르게 누르세요.");
   }
 
@@ -2019,11 +2045,13 @@ export class ClassroomHub extends DurableObject<Env> {
     size: number,
     round: number,
     totals: SpeedTapState["totals"],
+    totalRounds = 1,
   ): void {
     const now = Date.now();
     const state: SpeedTapState = {
       kind: "speedtap",
       round,
+      totalRounds: Math.max(round, totalRounds),
       size,
       target: Math.floor(Math.random() * size * size),
       // A random delay stops students from predicting the cell.
@@ -2042,7 +2070,11 @@ export class ClassroomHub extends DurableObject<Env> {
     const state = this.miniGame();
     if (state?.kind !== "speedtap") return;
     const nextRound = state.round + 1;
-    this.beginSpeedTapRound(state.size, nextRound, state.totals);
+    if (nextRound > (state.totalRounds ?? 1)) {
+      this.sendNoticeToAll("⏱ 모든 라운드가 끝났습니다!");
+      return;
+    }
+    this.beginSpeedTapRound(state.size, nextRound, state.totals, state.totalRounds ?? 1);
     this.sendNoticeToAll(`⏱ ${nextRound}라운드 시작! 준비하세요.`);
   }
 
@@ -2115,7 +2147,8 @@ export class ClassroomHub extends DurableObject<Env> {
   }
 
   private startJamo(raw: unknown): void {
-    const words = this.sanitizeJamoWords(raw);
+    const rules = this.miniRulesOf("jamo");
+    const words = this.sanitizeJamoWords(raw).slice(0, Math.max(1, rules.rounds));
     if (!words.length) {
       this.sendToTeachers({
         type: "notice",
@@ -3135,6 +3168,34 @@ export class ClassroomHub extends DurableObject<Env> {
     return this.first<QuizRow>("SELECT * FROM quiz ORDER BY started_at DESC LIMIT 1");
   }
 
+  /** 조립형 게임(scatter·order)에서 학생에게 보여 줄 타일을 만듭니다. */
+  private buildTiles(
+    play: "plain" | "scatter" | "order" | "meteor",
+    mode: QuizMode,
+    correctText: string | null,
+    options: string[],
+    correctOption: string | null,
+  ): string[] {
+    if (play === "plain") return [];
+    const answer =
+      mode === "choice"
+        ? (options[QUIZ_OPTION_IDS.indexOf(correctOption ?? "a")] ?? "")
+        : (correctText ?? "");
+    const cleaned = answer.trim();
+    if (!cleaned) return [];
+    const parts =
+      play === "scatter"
+        ? [...cleaned.replace(/\s+/g, "")]
+        : cleaned.split(/\s+/).filter(Boolean);
+    // 같은 글자가 여러 개면 타일을 구분하기 위해 id를 붙입니다.
+    const tiles = parts.map((part, index) => `${part}\u0000${index}`);
+    for (let index = tiles.length - 1; index > 0; index -= 1) {
+      const swap = Math.floor(Math.random() * (index + 1));
+      [tiles[index], tiles[swap]] = [tiles[swap], tiles[index]];
+    }
+    return tiles;
+  }
+
   private quizPublic(row: QuizRow): LiveQuiz {
     const answerCount = this.first<{ count: number }>(
       "SELECT COUNT(*) AS count FROM quiz_answers WHERE quiz_id = ?",
@@ -3175,6 +3236,9 @@ export class ClassroomHub extends DurableObject<Env> {
       lefts: pairs.map((pair) => pair.left),
       rights: pairs.map((pair) => pair.right),
       surface: row.surface === "notice" ? "notice" : "quiz",
+      play:
+        row.play === "scatter" || row.play === "order" || row.play === "meteor" ? row.play : "plain",
+      tiles: row.tiles_json ? (JSON.parse(row.tiles_json) as string[]) : [],
     };
   }
 

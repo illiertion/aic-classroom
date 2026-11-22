@@ -84,6 +84,7 @@ export function GamesHubTab({
           studentCount={studentCount}
           joinCode={joinCode}
           settings={settings}
+          onOpenMini={() => setView("mini")}
         />
       ) : (
         <MiniGameTab game={minigame} students={students} send={send} connected={connected} />

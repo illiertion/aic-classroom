@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+﻿import { useEffect, useMemo, useRef, useState } from "react";
 import type {
   ClientMessage,
   GameMode,
@@ -35,6 +35,7 @@ import {
 import { GameProjector } from "./GameProjector";
 import { downloadText } from "../../lib/boardStore";
 import { jamoPrompt } from "../../../shared/hangul";
+import { GAME_CATALOG, PLAY_HINT, findGame, type GameCatalogEntry } from "../../../shared/gameModes";
 import {
   exportGameSets,
   loadGameSets,
@@ -82,6 +83,7 @@ export function GameTab({
   studentCount,
   joinCode,
   settings,
+  onOpenMini,
 }: {
   quiz: LiveQuiz | null;
   results: QuizResults | null;
@@ -91,11 +93,15 @@ export function GameTab({
   studentCount: number;
   joinCode: string;
   settings: ClassSettings;
+  onOpenMini?: (kind: "wordsearch" | "memory") => void;
 }) {
   const [sets, setSets] = useState<GameSet[]>(() => loadGameSets());
   const [selectedId, setSelectedId] = useState(() => loadGameSets()[0]?.id ?? "");
   const [questionIndex, setQuestionIndex] = useState(0);
   const [gameMode, setGameMode] = useState<GameMode>("classic");
+  const [gameId, setGameId] = useState<string>("classic");
+  const [rounds, setRounds] = useState(0);
+  const [editorOpen, setEditorOpen] = useState(false);
   const [durationSec, setDurationSec] = useState(() => settings.quizSeconds || 0);
   const [error, setError] = useState<string | null>(null);
   const [projector, setProjector] = useState(false);
@@ -105,6 +111,18 @@ export function GameTab({
 
   const selected = sets.find((set) => set.id === selectedId) ?? sets[0] ?? null;
   const question = selected?.questions[questionIndex] ?? null;
+  const catalogEntry = findGame(gameId) ?? findGame("classic")!;
+  const roundLimit = rounds > 0 ? rounds : (selected?.questions.length ?? 0);
+
+  /** 게임을 고르면 그 게임의 방식(문제 유형·플레이·점수)으로 맞춥니다. */
+  const chooseGame = (entry: GameCatalogEntry) => {
+    setGameId(entry.id);
+    setGameMode(entry.mode);
+    setQuestionIndex(0);
+    setRounds(0);
+    setError(null);
+    if (entry.mini) onOpenMini?.(entry.mini);
+  };
 
   useEffect(() => {
     try {
@@ -205,31 +223,32 @@ export function GameTab({
       setError("문제를 입력해 주세요.");
       return;
     }
-    const options = optionsFor(selected.mode, question);
-    if (selected.mode === "choice" && options.length < 2) {
+    const mode: QuizMode = catalogEntry.quiz;
+    const options = optionsFor(mode, question);
+    if (mode === "choice" && options.length < 2) {
       setError("객관식은 선택지가 2개 이상 필요합니다.");
       return;
     }
-    if (selected.mode === "spell" && !question.answer.trim()) {
-      setError("주관식은 정답을 입력해 주세요.");
+    if (mode === "spell" && !question.answer.trim()) {
+      setError("주관식·조립형 게임은 정답을 입력해 주세요.");
       return;
     }
     const pairs = question.pairs
       .map((pair) => ({ left: pair.left.trim(), right: pair.right.trim() }))
       .filter((pair) => pair.left && pair.right);
-    if (selected.mode === "connect" && pairs.length < 2) {
+    if (mode === "connect" && pairs.length < 2) {
       setError("뜻 연결은 짝이 2개 이상 필요합니다.");
       return;
     }
     let answer = question.answer.trim();
-    if (selected.mode === "ox") {
+    if (mode === "ox") {
       answer = answer.toUpperCase();
       if (answer !== "O" && answer !== "X") {
         setError("OX 정답은 O 또는 X로 입력해 주세요.");
         return;
       }
     }
-    if (selected.mode === "choice" && !options.some((option) => sameAnswer(option, answer))) {
+    if (mode === "choice" && !options.some((option) => sameAnswer(option, answer))) {
       setError("정답이 선택지 중 하나와 같아야 채점할 수 있습니다. 정답 선택지를 눌러 주세요.");
       return;
     }
@@ -237,14 +256,15 @@ export function GameTab({
     send({
       type: "quiz_start",
       prompt: question.prompt.trim(),
-      mode: selected.mode,
+      mode,
       options,
-      answer: selected.mode === "connect" ? undefined : answer,
-      pairs: selected.mode === "connect" ? pairs : undefined,
+      answer: mode === "connect" ? undefined : answer,
+      pairs: mode === "connect" ? pairs : undefined,
       gameMode,
       round: questionIndex + 1,
-      totalRounds: selected.questions.length,
+      totalRounds: Math.max(questionIndex + 1, roundLimit),
       durationSec: durationSec || undefined,
+      play: catalogEntry.play,
     });
   };
 
@@ -320,8 +340,90 @@ export function GameTab({
 
   return (
     <>
+    <Card className="overflow-hidden">
+      <div className="border-b border-slate-100 px-5 py-4">
+        <CardHeader
+          title="게임 고르기"
+          description="띵커벨형 8종 + 일반전·아이템전. 고른 게임에 맞춰 문제 유형·플레이 방식·점수 규칙이 바뀝니다."
+          action={
+            <Badge tone="brand">
+              {catalogEntry.emoji} {catalogEntry.name}
+            </Badge>
+          }
+        />
+      </div>
+      <div className="grid gap-2 p-4 sm:grid-cols-2 xl:grid-cols-5">
+        {GAME_CATALOG.map((entry) => (
+          <button
+            key={entry.id}
+            type="button"
+            onClick={() => chooseGame(entry)}
+            className={cx(
+              "rounded-xl border p-3 text-left transition",
+              gameId === entry.id
+                ? "border-brand-500 bg-brand-50/70 ring-1 ring-brand-300"
+                : "border-slate-200 bg-white hover:border-brand-200 hover:bg-slate-50",
+            )}
+          >
+            <span className="flex items-center justify-between gap-1">
+              <span className="text-[18px]">{entry.emoji}</span>
+              {entry.mini ? (
+                <span className="rounded-full bg-violet-100 px-1.5 py-0.5 text-[9px] font-bold text-violet-700">
+                  미니게임
+                </span>
+              ) : entry.mode === "item" ? (
+                <span className="rounded-full bg-amber-100 px-1.5 py-0.5 text-[9px] font-bold text-amber-700">
+                  아이템
+                </span>
+              ) : null}
+            </span>
+            <span className="mt-1 block text-[12.5px] font-bold text-slate-900">{entry.name}</span>
+            <span className="mt-0.5 block text-[10.5px] leading-snug text-slate-400">
+              {entry.how}
+            </span>
+          </button>
+        ))}
+      </div>
+      <div className="flex flex-wrap items-center gap-3 border-t border-slate-100 px-4 py-3">
+        <div className="flex items-center gap-1.5">
+          <span className="text-[11px] font-semibold text-slate-500">라운드</span>
+          <Input
+            type="number"
+            min={1}
+            max={50}
+            value={String(rounds || selected?.questions.length || 1)}
+            onChange={(event) => setRounds(Math.max(1, Math.min(50, Number(event.target.value) || 1)))}
+            className="h-8 w-16 text-[12px]"
+            aria-label="라운드 수"
+          />
+          <span className="text-[10.5px] text-slate-400">문제</span>
+        </div>
+        <span className="text-[10.5px] text-slate-400">{PLAY_HINT[catalogEntry.play]}</span>
+        {catalogEntry.mini ? (
+          <Button size="sm" variant="secondary" onClick={() => onOpenMini?.(catalogEntry.mini!)}>
+            <IconSparkles size={13} /> 미니게임에서 시작
+          </Button>
+        ) : null}
+      </div>
+    </Card>
+
     <div className="grid gap-5 xl:grid-cols-[0.9fr_1.1fr]">
       <div className="space-y-4">
+        <Card className="flex items-center justify-between gap-3 px-4 py-3">
+          <div className="min-w-0">
+            <p className="text-[12.5px] font-bold text-slate-900">문제 편집</p>
+            <p className="truncate text-[10.5px] text-slate-400">
+              {selected
+                ? `${selected.name} · ${selected.questions.length}문제 · ${MODE_LABEL[selected.mode]}`
+                : "세트가 없습니다"}
+            </p>
+          </div>
+          <Button size="sm" variant="secondary" onClick={() => setEditorOpen((value) => !value)}>
+            {editorOpen ? "접기" : "열기"}
+          </Button>
+        </Card>
+        {editorOpen && (
+          <div className="space-y-4">
         <Card className="overflow-hidden">
           <div className="border-b border-slate-100 px-5 py-4">
             <CardHeader
@@ -648,9 +750,61 @@ export function GameTab({
         ) : (
           <EmptyState title="게임 세트가 없습니다" description="새 세트를 만들어 주세요." />
         )}
+          </div>
+        )}
       </div>
 
       <div className="space-y-4">
+        {game.scores.length > 0 ? (
+          <Card className="overflow-hidden">
+            <div className="flex items-center justify-between border-b border-slate-100 px-5 py-3">
+              <p className="flex items-center gap-1.5 text-[12.5px] font-bold text-slate-900">
+                <IconTrophy size={14} className="text-amber-500" /> 랭킹
+              </p>
+              <span className="text-[10.5px] text-slate-400">
+                {game.round}라운드 / {game.totalRounds}라운드
+              </span>
+            </div>
+            <div className="divide-y divide-slate-100">
+              {[...game.scores]
+                .sort((left, right) => right.points - left.points)
+                .slice(0, Math.max(3, settings.leaderboardSize))
+                .map((score, index) => (
+                  <div
+                    key={score.participantId}
+                    className="flex items-center justify-between gap-2 px-5 py-2 text-[12px]"
+                  >
+                    <span className="flex min-w-0 items-center gap-2">
+                      <span
+                        className={cx(
+                          "flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold",
+                          index === 0
+                            ? "bg-amber-100 text-amber-700"
+                            : index === 1
+                              ? "bg-slate-200 text-slate-700"
+                              : index === 2
+                                ? "bg-orange-100 text-orange-700"
+                                : "bg-slate-100 text-slate-500",
+                        )}
+                      >
+                        {index + 1}
+                      </span>
+                      <span className="truncate font-semibold text-slate-800">{score.name}</span>
+                      {score.alive ? null : (
+                        <span className="shrink-0 rounded-full bg-rose-50 px-1.5 py-0.5 text-[9px] font-bold text-rose-600">
+                          탈락
+                        </span>
+                      )}
+                    </span>
+                    <span className="shrink-0 font-mono text-[12px] font-bold text-brand-700">
+                      {score.points}
+                    </span>
+                  </div>
+                ))}
+            </div>
+          </Card>
+        ) : null}
+
         <Card className="overflow-hidden">
           <div className="border-b border-slate-100 px-5 py-4">
             <CardHeader
@@ -1003,3 +1157,5 @@ export function GameTab({
     </>
   );
 }
+
+

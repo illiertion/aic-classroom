@@ -108,6 +108,98 @@ function countdown(ms: number): string {
 }
 
 /**
+ * 조립형 게임(흩어진 단어 찾기·단어/문장 순서): 서버가 내려준 타일을 눌러 답을 만듭니다.
+ * 채점은 서버가 텍스트 답안으로 그대로 검증합니다.
+ */
+function QuizTiles({
+  quiz,
+  disabled,
+  submitted,
+  onSubmit,
+}: {
+  quiz: LiveQuiz;
+  disabled: boolean;
+  submitted: string | null;
+  onSubmit: (text: string) => void;
+}) {
+  const tiles = useMemo(
+    () =>
+      (quiz.tiles ?? []).map((raw, index) => {
+        const [label] = raw.split("\u0000");
+        return { key: raw, label, index };
+      }),
+    [quiz.tiles],
+  );
+  const [picked, setPicked] = useState<number[]>([]);
+
+  useEffect(() => {
+    setPicked([]);
+  }, [quiz.id]);
+
+  const words = picked.map((index) => tiles[index]?.label ?? "");
+  const built = quiz.play === "order" ? words.join(" ") : words.join("");
+
+  return (
+    <div className="space-y-2">
+      <div className="flex min-h-11 flex-wrap items-center gap-1.5 rounded-xl bg-slate-100 px-3 py-2">
+        {picked.length === 0 ? (
+          <span className="text-[11.5px] text-slate-400">아래 타일을 순서대로 눌러 보세요</span>
+        ) : null}
+        {picked.map((index, position) => (
+          <button
+            key={`${tiles[index]?.key}-${position}`}
+            type="button"
+            disabled={disabled}
+            onClick={() => setPicked((current) => current.filter((_, spot) => spot !== position))}
+            className="rounded-lg bg-white px-2 py-1 text-[13px] font-bold text-slate-800 shadow-sm ring-1 ring-slate-200"
+          >
+            {tiles[index]?.label}
+          </button>
+        ))}
+      </div>
+      <div className="flex flex-wrap gap-1.5">
+        {tiles.map((tile, index) => {
+          const used = picked.includes(index);
+          return (
+            <button
+              key={tile.key}
+              type="button"
+              disabled={disabled || used}
+              onClick={() => setPicked((current) => [...current, index])}
+              className={cx(
+                "rounded-xl px-3 py-2 text-[15px] font-bold transition",
+                used
+                  ? "bg-slate-100 text-slate-300 ring-1 ring-slate-200"
+                  : "bg-white text-slate-800 ring-1 ring-slate-300 hover:bg-brand-50",
+              )}
+            >
+              {tile.label}
+            </button>
+          );
+        })}
+      </div>
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-[10.5px] text-slate-400">
+          {submitted ? `내 답: ${submitted}` : "타일을 모두 골라 제출하세요"}
+        </span>
+        <div className="flex gap-1.5">
+          <Button size="sm" variant="secondary" disabled={disabled || !picked.length} onClick={() => setPicked([])}>
+            지우기
+          </Button>
+          <Button
+            size="sm"
+            disabled={disabled || picked.length !== tiles.length || !built}
+            onClick={() => onSubmit(built)}
+          >
+            <IconCheck size={14} /> 제출
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/**
  * Full-screen content pushed by the teacher. Fullscreen itself needs a tap, so
  * the overlay always shows a big button and also attempts the transition when
  * the browser allows it.
@@ -946,9 +1038,9 @@ export default function StudentRoom() {
     socketSend({ type: "quiz_answer", optionId });
   };
 
-  const submitSpell = () => {
-    if (!quiz || !quizOpen || ended || !spellAnswer.trim()) return;
-    const text = spellAnswer.trim();
+  const submitSpell = (raw?: string) => {
+    const text = (raw ?? spellAnswer).trim();
+    if (!quiz || !quizOpen || ended || !text) return;
     setMyAnswer(text);
     socketSend({ type: "quiz_answer", text });
   };
@@ -1623,7 +1715,17 @@ export default function StudentRoom() {
                   선생님이 다시 시작하면 참여할 수 있습니다.
                 </Callout>
               ) : null}
-              {quiz.mode === "spell" ? (
+              {quiz.play === "scatter" || quiz.play === "order" ? (
+                <QuizTiles
+                  quiz={quiz}
+                  disabled={!quizOpen || ended}
+                  submitted={myAnswer}
+                  onSubmit={(text) => {
+                    setSpellAnswer(text);
+                    submitSpell(text);
+                  }}
+                />
+              ) : quiz.mode === "spell" ? (
                 <div className="space-y-2">
                   <Textarea
                     value={spellAnswer}
@@ -1640,7 +1742,7 @@ export default function StudentRoom() {
                     <Button
                       size="sm"
                       disabled={!quizOpen || ended || !spellAnswer.trim()}
-                      onClick={submitSpell}
+                      onClick={() => submitSpell()}
                     >
                       <IconCheck size={14} /> 정답 제출
                     </Button>
