@@ -209,6 +209,8 @@ export function ToolboxTab({
 }) {
   const teams = teamLabels(roster.teamCount);
   const [step, setStep] = useState(1);
+  // 도구는 기본으로 덮어 두고, 버튼을 눌러서 열어 씁니다.
+  const [openTool, setOpenTool] = useState<string | null>(null);
   const online = students.filter((student) => student.online);
   const checkedIn = useMemo(
     () => new Set(tools.attendance.map((entry) => entry.participantId)),
@@ -226,7 +228,33 @@ export function ToolboxTab({
         선생님 화면에서만 동작하고 아무것도 저장하지 않습니다.
       </Callout>
 
+      <div className="flex flex-wrap gap-2">
+        {(
+          [
+            ["score", "🏆 모둠 점수판"],
+            ["attendance", "✅ 출석 체크"],
+            ["noise", "🔊 소음 측정기"],
+            ["stopwatch", "⏱ 스톱워치"],
+          ] as [string, string][]
+        ).map(([id, label]) => (
+          <button
+            key={id}
+            type="button"
+            onClick={() => setOpenTool((current) => (current === id ? null : id))}
+            className={cx(
+              "rounded-xl px-3.5 py-2 text-[12.5px] font-bold ring-1 transition",
+              openTool === id
+                ? "bg-slate-900 text-white ring-slate-900"
+                : "bg-white text-slate-600 ring-slate-200 hover:bg-slate-50",
+            )}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
       <div className="grid gap-4 xl:grid-cols-2">
+        {openTool === "score" ? (
         <Card className="overflow-hidden">
           <div className="border-b border-slate-100 px-5 py-4">
             <CardHeader
@@ -299,7 +327,9 @@ export function ToolboxTab({
             ) : null}
           </div>
         </Card>
+        ) : null}
 
+        {openTool === "attendance" ? (
         <Card className="overflow-hidden">
           <div className="border-b border-slate-100 px-5 py-4">
             <CardHeader
@@ -366,7 +396,9 @@ export function ToolboxTab({
             </p>
           </div>
         </Card>
+        ) : null}
 
+        {openTool === "noise" ? (
         <Card className="overflow-hidden">
           <div className="border-b border-slate-100 px-5 py-4">
             <CardHeader
@@ -379,7 +411,9 @@ export function ToolboxTab({
             <NoiseMeter />
           </div>
         </Card>
+        ) : null}
 
+        {openTool === "stopwatch" ? (
         <Card className="overflow-hidden">
           <div className="border-b border-slate-100 px-5 py-4">
             <CardHeader
@@ -392,6 +426,7 @@ export function ToolboxTab({
             <Stopwatch />
           </div>
         </Card>
+        ) : null}
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">

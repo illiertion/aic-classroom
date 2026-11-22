@@ -406,6 +406,39 @@ export function ToolsTab({
                 ) : (
                   <Badge tone="neutral">응답이 마감되었습니다</Badge>
                 )}
+                <Button
+                  size="sm"
+                  disabled={!connected}
+                  onClick={() => {
+                    const lines: string[] = [];
+                    lines.push(`응답 ${totalAnswers}/${studentCount}명`);
+                    if (quiz.correctAnswer) lines.push(`정답: ${quiz.correctAnswer}`);
+                    if (results && results.correctCount > 0) lines.push(`정답 ${results.correctCount}명`);
+                    if (quiz.mode !== "spell") {
+                      for (const option of quiz.options) {
+                        const tally = results?.tallies[option.id] ?? 0;
+                        if (tally > 0) lines.push(`${option.label}: ${tally}명`);
+                      }
+                    } else if (results?.responses.length) {
+                      lines.push("");
+                      for (const response of results.responses) {
+                        lines.push(
+                          `${response.studentName}: ${response.text ?? "—"}${response.correct === true ? " ✅" : ""}`,
+                        );
+                      }
+                    }
+                    send({
+                      type: "stage_set",
+                      kind: "note",
+                      title: "퀴즈 결과",
+                      body: lines.join("\n").slice(0, 3500),
+                      requireFullscreen: false,
+                    });
+                    send({ type: "nudge_all", text: "퀴즈 결과가 공개되었습니다." });
+                  }}
+                >
+                  <IconCast size={14} /> 결과를 학생에게 띄우기
+                </Button>
               </div>
             </div>
           )}

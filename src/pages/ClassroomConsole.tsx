@@ -11,7 +11,6 @@ import type {
   ClassToolsState,
   RosterState,
   ClientMessage,
-  GameState,
   InputPreview,
   LiveBoard,
   LiveQuiz,
@@ -58,7 +57,6 @@ import {
 import { formatDate } from "../lib/format";
 import { MonitorTab } from "../features/teacher/MonitorTab";
 import { ToolsTab } from "../features/teacher/ToolsTab";
-import { GameTab } from "../features/teacher/GameTab";
 import { PadletTab } from "../features/teacher/PadletTab";
 import { BoardTab } from "../features/teacher/BoardTab";
 import { ScreenShareTab } from "../features/teacher/ScreenShareTab";
@@ -82,23 +80,13 @@ import {
 
 const TABS = [
   { id: "monitor", label: "현황" },
-  { id: "game", label: "게임" },
   { id: "tools", label: "학습지" },
+  { id: "board", label: "보드" },
   { id: "activity", label: "활동·띄우기" },
   { id: "teams", label: "모둠·도구" },
   { id: "settings", label: "설정·기록" },
 ];
 
-const EMPTY_GAME: GameState = {
-  mode: "classic",
-  round: 0,
-  totalRounds: 1,
-  scores: [],
-  teams: [],
-  lobbyOpen: false,
-  items: [],
-  feed: [],
-};
 const EMPTY_TOOLS: ClassToolsState = { scores: {}, checkinOpen: false, attendance: [] };
 const EMPTY_ROSTER: RosterState = {
   teamCount: 4,
@@ -131,7 +119,6 @@ export default function ClassroomConsole() {
   const [board, setBoard] = useState<LiveBoard | null>(null);
   const [stage, setStage] = useState<StageContent | null>(null);
   const [timer, setTimer] = useState<ClassTimer | null>(null);
-  const [game, setGame] = useState<GameState>(EMPTY_GAME);
   const [teamBoards, setTeamBoards] = useState<TeamBoard[]>([]);
   const [presenter, setPresenter] = useState<PresenterPick | null>(null);
   const [tools, setTools] = useState<ClassToolsState>(EMPTY_TOOLS);
@@ -180,7 +167,6 @@ export default function ClassroomConsole() {
     setBoard(snapshot.board);
     setStage(snapshot.stage);
     setTimer(snapshot.timer);
-    setGame(snapshot.game);
     setTeamBoards(snapshot.teamBoards);
     setPresenter(snapshot.presenter);
     setTools(snapshot.tools ?? EMPTY_TOOLS);
@@ -292,8 +278,6 @@ export default function ClassroomConsole() {
         case "timer":
           setTimer(message.timer);
           return;
-        case "game":
-          setGame(message.game);
           return;
         case "teams":
           setTeamBoards(message.boards);
@@ -621,17 +605,11 @@ export default function ClassroomConsole() {
       </div>
 
       <div className="mt-4">
-        {tab === "game" ? (
-          <GameTab
-            quiz={quiz}
-            results={quizResults}
-            game={game}
-            send={socket.send}
-            connected={socket.status === "open" && classroom.status === "live"}
-            studentCount={students.length}
-            joinCode={classroom.joinCode}
-            settings={settings}
-          />
+        {tab === "board" ? (
+          <div className="space-y-6">
+            <BoardTab board={board} send={socket.send} connected={socket.status === "open" && classroom.status === "live"} />
+            <PadletTab send={socket.send} connected={socket.status === "open" && classroom.status === "live"} />
+          </div>
         ) : null}
         {tab === "activity" ? (
           <div className="space-y-6">
@@ -646,8 +624,6 @@ export default function ClassroomConsole() {
               quiz={quiz}
               results={quizResults}
             />
-            <BoardTab board={board} send={socket.send} connected={socket.status === "open" && classroom.status === "live"} />
-            <PadletTab send={socket.send} connected={socket.status === "open" && classroom.status === "live"} />
             <ScreenShareTab students={students} share={screenShare} />
           </div>
         ) : null}
@@ -692,18 +668,6 @@ export default function ClassroomConsole() {
             send={socket.send}
             connected={socket.status === "open" && classroom.status === "live"}
             studentCount={students.length}
-          />
-        ) : null}
-        {tab === "game" ? (
-          <GameTab
-            quiz={quiz}
-            results={quizResults}
-            game={game}
-            send={socket.send}
-            connected={socket.status === "open" && classroom.status === "live"}
-            studentCount={students.length}
-            joinCode={classroom.joinCode}
-            settings={settings}
           />
         ) : null}
         {tab === "teams" ? (
