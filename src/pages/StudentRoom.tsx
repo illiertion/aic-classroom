@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+﻿import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Navigate, useNavigate, useParams } from "react-router-dom";
 import { api, ApiRequestError } from "../lib/api";
 import { useClassroomSocket } from "../lib/realtime";
@@ -28,6 +28,7 @@ import type {
   TeamBoard,
   WorksheetState,
 } from "../../shared/protocol";
+import { DEFAULT_SETTINGS, type ClassSettings } from "../../shared/settings";
 import { teamLabels, teamTone } from "../../shared/roster";
 import { LogoMark } from "../components/Logo";
 import { LiveVideo } from "../components/LiveVideo";
@@ -113,12 +114,14 @@ function countdown(ms: number): string {
 function StageOverlay({
   stage,
   board,
+  allowPosts,
   ended,
   onAddCard,
   onHide,
 }: {
   stage: StageContent;
   board: LiveBoard | null;
+  allowPosts: boolean;
   ended: boolean;
   onAddCard: (text: string) => void;
   onHide: () => void;
@@ -248,7 +251,7 @@ function StageOverlay({
                       카드 {board.cards.length}장
                     </span>
                   </div>
-                  {board.allowStudentPosts && !ended ? (
+                  {allowPosts && !ended ? (
                     <div className="mb-4 rounded-2xl border border-slate-200 bg-white p-3">
                       <textarea
                         value={draft}
@@ -343,6 +346,8 @@ export default function StudentRoom() {
   const [connectAnswers, setConnectAnswers] = useState<Record<string, string>>({});
   const quizIdRef = useRef<string | null>(null);
   const [sfx, setSfx] = useState(() => isSfxEnabled());
+  const [settings, setSettings] = useState<ClassSettings>(DEFAULT_SETTINGS);
+  const settingsTouched = useRef(false);
   const [worksheetLocked, setWorksheetLocked] = useState(false);
   const [fullscreenRequested, setFullscreenRequested] = useState(false);
   const [teamText, setTeamText] = useState("");
@@ -416,6 +421,14 @@ export default function StudentRoom() {
       setMinigame(snapshot.minigame);
       setTools(snapshot.tools ?? { scores: {}, checkinOpen: false, attendance: [] });
       if (snapshot.roster) setRoster(snapshot.roster);
+      if (snapshot.settings) {
+        setSettings(snapshot.settings);
+        if (!settingsTouched.current) {
+          settingsTouched.current = true;
+          setSfx(snapshot.settings.soundEnabled);
+          setSfxEnabled(snapshot.settings.soundEnabled);
+        }
+      }
       setMe(snapshot.self);
       if (snapshot.quiz?.id !== quizIdRef.current) {
         quizIdRef.current = snapshot.quiz?.id ?? null;
@@ -506,6 +519,9 @@ export default function StudentRoom() {
           break;
         case "roster":
           setRoster(message.roster);
+          break;
+        case "settings":
+          setSettings(message.settings);
           break;
         case "you":
           setMe(message.self);
@@ -877,9 +893,14 @@ export default function StudentRoom() {
   }
 
   const showFullscreenPrompt =
-    classroom.requireFullscreen && fullscreen === false && !dismissedPrompt && !ended;
+    classroom.requireFullscreen &&
+    settings.requireFullscreen &&
+    fullscreen === false &&
+    !dismissedPrompt &&
+    !ended;
 
   const myGame = game.scores.find((score) => score.participantId === stored.participantId) ?? null;
+  const canPostToBoard = Boolean(board?.allowStudentPosts) && settings.allowStudentPosts;
   // A background tab throttles the tick interval, so `now` can lag behind the
   // real clock. Clamping keeps the countdown from ever showing more than the
   // configured duration.
@@ -983,6 +1004,7 @@ export default function StudentRoom() {
                 {classroom.title}
               </p>
               <p className="truncate text-[10.5px] text-slate-400">
+                {settings.className ? `${settings.className} · ` : ""}
                 {classroom.teacherName} 선생님 · {stored.name}
               </p>
             </div>
@@ -1314,14 +1336,16 @@ export default function StudentRoom() {
               </div>
             </div>
             <div className="flex flex-wrap items-center gap-2">
-              <Button
-                size="sm"
-                variant={handRaised ? "success" : "secondary"}
-                disabled={ended}
-                onClick={toggleHand}
-              >
-                <IconHand size={14} /> {handRaised ? "손 내리기" : "손들기"}
-              </Button>
+              {settings.allowHandRaise ? (
+                <Button
+                  size="sm"
+                  variant={handRaised ? "success" : "secondary"}
+                  disabled={ended}
+                  onClick={toggleHand}
+                >
+                  <IconHand size={14} /> {handRaised ? "손 내리기" : "손들기"}
+                </Button>
+              ) : null}
               {fullscreen !== true && !ended ? (
                 <Button
                   size="sm"
@@ -1350,6 +1374,13 @@ export default function StudentRoom() {
           </p>
         </div>
 
+        {settings.joinNotice ? (
+          <Callout tone="info" icon={<IconAlert size={15} />} className="mt-1">
+            {settings.joinNotice}
+          </Callout>
+        ) : null}
+
+        {settings.allowStudentShare ? (
         <Card className="overflow-hidden">
           <div className="flex items-start justify-between gap-3 border-b border-slate-100 px-5 py-4">
             <div>
@@ -1380,6 +1411,7 @@ export default function StudentRoom() {
             )}
           </div>
         </Card>
+        ) : null}
 
         {game.lobbyOpen && !quiz ? (
           <Card className="overflow-hidden">
@@ -1544,12 +1576,16 @@ export default function StudentRoom() {
               <p className="mt-2 text-[18px] font-bold leading-snug tracking-tight">{quiz.prompt}</p>
               <p className="mt-1 flex flex-wrap items-center gap-1.5 text-[10.5px] text-indigo-200">
                 응답 {quiz.answerCount}명 ·{" "}
-                {myAnswer ? "내 응답 제출됨" : "아직 응답하지 않았습니다"} ·
-                <IconTrophy size={11} className="text-amber-300" /> 내 점수{" "}
-                {myGame?.points ?? 0}점
-                {myGame && game.scores.length > 1
-                  ? ` · ${game.scores.findIndex((score) => score.participantId === stored.participantId) + 1}위`
-                  : ""}
+                {myAnswer ? "내 응답 제출됨" : "아직 응답하지 않았습니다"}
+                {settings.showLeaderboard ? (
+                  <>
+                    {" "}·{" "}
+                    <IconTrophy size={11} className="text-amber-300" /> 내 점수 {myGame?.points ?? 0}점
+                    {myGame && game.scores.length > 1
+                      ? ` · ${game.scores.findIndex((score) => score.participantId === stored.participantId) + 1}위`
+                      : ""}
+                  </>
+                ) : null}
               </p>
             </div>
             <div className="space-y-2 p-4">
@@ -1860,8 +1896,8 @@ export default function StudentRoom() {
                   <IconLayout size={15} className="text-brand-600" />
                   <p className="text-[12.5px] font-semibold text-slate-900">{board.title}</p>
                 </div>
-                <Badge tone={board.allowStudentPosts ? "ok" : "neutral"}>
-                  {board.allowStudentPosts ? "카드 작성 가능" : "보기 전용"}
+                <Badge tone={canPostToBoard ? "ok" : "neutral"}>
+                  {canPostToBoard ? "카드 작성 가능" : "보기 전용"}
                 </Badge>
               </div>
               {board.instructions ? (
@@ -1924,7 +1960,7 @@ export default function StudentRoom() {
                 </div>
               )}
 
-              {board.allowStudentPosts && !ended ? (
+              {canPostToBoard && !ended ? (
                 <div className="mt-4 rounded-xl border border-slate-200 p-3">
                   <Textarea
                     value={boardText}
@@ -2031,6 +2067,7 @@ export default function StudentRoom() {
         <StageOverlay
           stage={stage}
           board={board}
+          allowPosts={settings.allowStudentPosts}
           ended={ended}
           onAddCard={(text) =>
             socketSend({
@@ -2055,3 +2092,8 @@ export default function StudentRoom() {
     </div>
   );
 }
+
+
+
+
+

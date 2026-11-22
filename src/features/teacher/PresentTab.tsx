@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+﻿import { useEffect, useMemo, useState } from "react";
 import type {
   ClassTimer,
   ClientMessage,
@@ -7,6 +7,7 @@ import type {
   StageKind,
   StudentLive,
 } from "../../../shared/protocol";
+import type { ClassSettings } from "../../../shared/settings";
 import {
   Avatar,
   Badge,
@@ -125,6 +126,7 @@ export function PresentTab({
   board,
   send,
   connected,
+  settings,
 }: {
   stage: StageContent | null;
   timer: ClassTimer | null;
@@ -132,6 +134,7 @@ export function PresentTab({
   board: LiveBoard | null;
   send: (message: ClientMessage) => void;
   connected: boolean;
+  settings: ClassSettings;
 }) {
   const [kind, setKind] = useState<StageKind>("url");
   const [title, setTitle] = useState("");
@@ -139,7 +142,9 @@ export function PresentTab({
   const [body, setBody] = useState("");
   const [requireFullscreen, setRequireFullscreen] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
-  const [duration, setDuration] = useState(50);
+  const [duration, setDuration] = useState(() =>
+    Math.min(120, Math.max(1, Math.round(settings.timerMinutes))),
+  );
   const [history, setHistory] = useState<StageContent[]>(readHistory);
   const [popupBlocked, setPopupBlocked] = useState(false);
 
@@ -603,3 +608,4 @@ export function PresentTab({
     </div>
   );
 }
+

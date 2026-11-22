@@ -1,10 +1,11 @@
-// Temporary local render check for the new games/tools UI. Deleted after use.
+﻿// Temporary local render check for the new games/tools UI. Deleted after use.
 import { createRoot } from "react-dom/client";
 import "./index.css";
 import { LadderBoard } from "./components/LadderBoard";
 import { MiniGameCard } from "./components/MiniGameCard";
 import { MiniGameTab } from "./features/teacher/MiniGameTab";
 import { TeamTab } from "./features/teacher/TeamTab";
+import { DEFAULT_SETTINGS } from "../shared/settings";
 import { GameTab } from "./features/teacher/GameTab";
 import { ToolboxTab } from "./features/teacher/ToolboxTab";
 import type { GameState, LadderState, RosterState, StudentLive } from "../shared/protocol";
@@ -221,6 +222,7 @@ function Check() {
           connected
           studentCount={2}
           joinCode="733746"
+          settings={DEFAULT_SETTINGS}
         />
       </section>
       <section id="minigametab">
@@ -234,3 +236,5 @@ function Check() {
 }
 
 createRoot(document.getElementById("root")!).render(<Check />);
+
+

@@ -26,6 +26,7 @@ import type {
   WorksheetState,
   WorksheetSubmission,
 } from "../../shared/protocol";
+import { DEFAULT_SETTINGS, type ClassSettings } from "../../shared/settings";
 import { AppShell } from "../components/AppShell";
 import { JoinQr } from "../components/JoinQr";
 import {
@@ -63,6 +64,7 @@ import { PadletTab } from "../features/teacher/PadletTab";
 import { BoardTab } from "../features/teacher/BoardTab";
 import { ScreenShareTab } from "../features/teacher/ScreenShareTab";
 import { PresentTab } from "../features/teacher/PresentTab";
+import { SettingsTab } from "../features/teacher/SettingsTab";
 import { TeamTab } from "../features/teacher/TeamTab";
 import { ToolboxTab } from "../features/teacher/ToolboxTab";
 import { EventsTab } from "../features/teacher/EventsTab";
@@ -89,6 +91,7 @@ const TABS = [
   { id: "board", label: "활동 보드" },
   { id: "padlet", label: "패들렛" },
   { id: "share", label: "화면 공유" },
+  { id: "settings", label: "수업 설정" },
   { id: "events", label: "기록" },
 ];
 
@@ -142,6 +145,7 @@ export default function ClassroomConsole() {
   const [minigame, setMinigame] = useState<MiniGameState | null>(null);
   const [tools, setTools] = useState<ClassToolsState>(EMPTY_TOOLS);
   const [roster, setRoster] = useState<RosterState>(EMPTY_ROSTER);
+  const [settings, setSettings] = useState<ClassSettings>(DEFAULT_SETTINGS);
   const [joinBase, setJoinBase] = useState(() => readJoinBase());
   const [joinBaseDraft, setJoinBaseDraft] = useState(() => readJoinBase());
   const [joinBaseError, setJoinBaseError] = useState<string | null>(null);
@@ -191,6 +195,7 @@ export default function ClassroomConsole() {
     setMinigame(snapshot.minigame);
     setTools(snapshot.tools ?? EMPTY_TOOLS);
     setRoster(snapshot.roster ?? EMPTY_ROSTER);
+    setSettings(snapshot.settings ?? DEFAULT_SETTINGS);
     setObserving(snapshot.observing);
     setInputs(snapshot.inputs);
     setEvents((previous) => {
@@ -314,6 +319,9 @@ export default function ClassroomConsole() {
           return;
         case "roster":
           setRoster(message.roster);
+          return;
+        case "settings":
+          setSettings(message.settings);
           return;
         case "observe":
           setObserving(message.observing);
@@ -639,6 +647,7 @@ export default function ClassroomConsole() {
             board={board}
             send={socket.send}
             connected={socket.status === "open" && classroom.status === "live"}
+            settings={settings}
           />
         ) : null}
         {tab === "monitor" ? (
@@ -675,6 +684,7 @@ export default function ClassroomConsole() {
             connected={socket.status === "open" && classroom.status === "live"}
             studentCount={students.length}
             joinCode={classroom.joinCode}
+            settings={settings}
           />
         ) : null}
         {tab === "toolbox" ? (
@@ -703,6 +713,13 @@ export default function ClassroomConsole() {
           <PadletTab send={socket.send} connected={socket.status === "open" && classroom.status === "live"} />
         ) : null}
         {tab === "share" ? <ScreenShareTab students={students} share={screenShare} /> : null}
+        {tab === "settings" ? (
+          <SettingsTab
+            settings={settings}
+            send={socket.send}
+            connected={socket.status === "open" && classroom.status === "live"}
+          />
+        ) : null}
         {tab === "events" ? (
           <EventsTab
             events={events}

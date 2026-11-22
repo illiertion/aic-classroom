@@ -1,4 +1,4 @@
-import { useAuth } from "../lib/auth";
+﻿import { useAuth } from "../lib/auth";
 import { AppShell } from "../components/AppShell";
 import { Badge, Callout, Card, CardHeader, cx } from "../components/ui";
 import {
@@ -12,6 +12,7 @@ import {
   IconLayout,
   IconLock,
   IconMonitor,
+  IconSettings,
   IconSparkles,
   IconTrophy,
   IconUsers,
@@ -87,7 +88,7 @@ const TABS = [
     tone: "warn" as const,
     points: [
       "한 탭에서 ‘문제 게임’과 ‘미니게임’을 전환해 바로 시작",
-      "일반전(100점)·스피드전(최대 200점)·골든벨(오답 탈락)·팀전(모둠 합산)·아이템전",
+      "일반전·스피드전·골든벨·팀전·아이템전 (점수는 수업 설정에서 바꿉니다)",
       "대기 화면: 방번호와 접속 학생 목록을 크게 띄워 함께 시작",
       "문제 유형: 3~6지선다·OX·주관식 단어·뜻 연결(짝 맞히기)을 직접 편집",
       "문제별 제한 시간 20·30·60초 · 시간이 끝나면 서버가 자동 마감",
@@ -168,6 +169,17 @@ const TABS = [
       "선생님 화면을 학생 화면 맨 위에 크게 표시(자동 재연결)",
       "학생 화면을 받아 ‘크게 보기’로 프로젝터에 전체화면",
       "모두에게 화면 공유 요청",
+    ],
+  },
+  {
+    icon: IconSettings,
+    name: "수업 설정",
+    tone: "info" as const,
+    points: [
+      "정답·오답 점수, 속도 가점, 랭킹 인원을 직접 지정",
+      "문제 기본 제한 시간(0 = 무제한)과 아이템 효과 수치 조정",
+      "학생 화면의 전체화면·화면 공유·손들기·보드 작성·순위 표시를 켜고 끄기",
+      "학급 이름과 안내 문구를 학급에 맞게 바꾸기",
     ],
   },
   {
@@ -258,7 +270,7 @@ export default function Guide() {
 
       <div className="mt-8 flex items-center justify-between">
         <h2 className="text-[15px] font-bold text-slate-900">선생님 콘솔 탭</h2>
-        <span className="text-[11.5px] text-slate-400">10개 탭</span>
+        <span className="text-[11.5px] text-slate-400">11개 탭</span>
       </div>
       <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {TABS.map((tab) => (
@@ -357,3 +369,5 @@ export default function Guide() {
     </AppShell>
   );
 }
+
+

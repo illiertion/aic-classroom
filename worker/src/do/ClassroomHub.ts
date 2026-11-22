@@ -1,6 +1,7 @@
-import { DurableObject } from "cloudflare:workers";
+﻿import { DurableObject } from "cloudflare:workers";
 import type { Env } from "../types";
 import { randomId } from "../lib/crypto";
+import { DEFAULT_SETTINGS, normalizeSettings, type ClassSettings } from "../../../shared/settings";
 import type {
   BoardCard,
   BoardColor,
@@ -423,8 +424,6 @@ const ITEM_LABEL: Record<GameItemKind, string> = {
   steal: "훔치기",
   bonus: "+50점",
 };
-/** 아이템전에서 한 학생이 들고 있을 수 있는 최대 개수. */
-const ITEM_CAP = 3;
 const FEED_CAP = 24;
 
 const FIELD_TYPES: ReadonlySet<string> = new Set(["short", "long", "ox"]);
@@ -748,10 +747,15 @@ export class ClassroomHub extends DurableObject<Env> {
           200,
           Math.max(round, Math.round(Number(data.totalRounds) || Number(this.configValue("total_rounds") ?? 0) || round)),
         );
-        const durationSec =
-          Number.isFinite(Number(data.durationSec)) && Number(data.durationSec) > 0
-            ? Math.min(3600, Math.max(5, Math.round(Number(data.durationSec))))
-            : null;
+        const durationRaw = Number(data.durationSec);
+        const settings = this.settings();
+        const durationSec = Number.isFinite(durationRaw) && durationRaw > 0
+          ? Math.min(3600, Math.max(5, Math.round(durationRaw)))
+          : data.durationSec === null || durationRaw === 0
+            ? null
+            : settings.quizSeconds > 0
+              ? settings.quizSeconds
+              : null;
         const now = Date.now();
         // Round 1 or a different game flavour starts a brand new scoreboard.
         if (round === 1 || gameMode !== (previous?.game_mode ?? "classic")) {
@@ -829,6 +833,10 @@ export class ClassroomHub extends DurableObject<Env> {
       }
       case "roster_set": {
         this.updateRoster(data);
+        return;
+      }
+      case "settings_set": {
+        this.saveSettings(data.settings);
         return;
       }
       case "seat_assign": {
@@ -1178,20 +1186,25 @@ export class ClassroomHub extends DurableObject<Env> {
           if (quiz.correct_option) correct = value === quiz.correct_option ? 1 : 0;
         }
         const elapsedMs = Math.max(0, now - quiz.started_at);
-        const speedBonus =
-          quiz.duration_sec && quiz.duration_sec > 0
-            ? Math.round(Math.max(0, 1 - elapsedMs / (quiz.duration_sec * 1000)) * 100)
+        const settings = this.settings();
+        const speedPoints =
+          settings.speedBonus && quiz.duration_sec && quiz.duration_sec > 0
+            ? Math.round(Math.max(0, 1 - elapsedMs / (quiz.duration_sec * 1000)) * settings.correctPoints)
             : 0;
         let points =
-          correct === 1 ? (gameMode === "speed" ? 100 + speedBonus : 100) : 0;
-        // 아이템전: 더블 아이템이 켜져 있으면 이번 정답이 2배가 된다.
+          correct === 1
+            ? settings.correctPoints + (gameMode === "speed" ? speedPoints : 0)
+            : correct === 0
+              ? settings.wrongPoints
+              : 0;
+        // 아이템전: 더블 아이템이 켜져 있으면 이번 정답이 몇 배로 오른다.
         if (correct === 1 && gameMode === "item") {
           const effect = this.first<{ double_on: number }>(
             "SELECT double_on FROM game_effects WHERE participant_id = ?",
             participantId,
           );
           if (effect?.double_on === 1) {
-            points *= 2;
+            points *= settings.itemDoubleMultiplier;
             this.run("UPDATE game_effects SET double_on = 0 WHERE participant_id = ?", participantId);
           }
         }
@@ -1212,8 +1225,7 @@ export class ClassroomHub extends DurableObject<Env> {
         );
         if (correct === 1 && points > 0) {
           this.addFeed(`${name} 학생이 ${points}점을 얻었습니다.`, "good");
-        }
-        if (correct === 1 && gameMode === "item") {
+        }        if (correct === 1 && gameMode === "item") {
           this.grantItem(participantId, name);
         }
         if (gameMode === "goldenbell" && correct === 0) {
@@ -2264,6 +2276,28 @@ export class ClassroomHub extends DurableObject<Env> {
     return teamLabels(this.rosterBase().teamCount);
   }
 
+  /* ------------------------------ settings ---------------------------- */
+
+  /** 선생님이 조정한 수업 설정(없으면 기본값). */
+  private settings(): ClassSettings {
+    const raw = this.configValue("settings");
+    if (!raw) return { ...DEFAULT_SETTINGS };
+    try {
+      return normalizeSettings(JSON.parse(raw));
+    } catch {
+      return { ...DEFAULT_SETTINGS };
+    }
+  }
+
+  /** 부분 patch를 합쳐 저장하고, 교사·학생 모두에게 새 설정을 알립니다. */
+  private saveSettings(patch: unknown): void {
+    if (!patch || typeof patch !== "object") return;
+    const next = normalizeSettings({ ...this.settings(), ...(patch as Record<string, unknown>) });
+    this.setConfig("settings", JSON.stringify(next));
+    this.sendToTeachers({ type: "settings", settings: next });
+    this.sendToStudents({ type: "settings", settings: next });
+  }
+
   private broadcastRoster(): void {
     const roster = this.rosterPublic();
     this.sendToTeachers({ type: "roster", roster });
@@ -2532,11 +2566,12 @@ export class ClassroomHub extends DurableObject<Env> {
   }
 
   private grantItem(participantId: string, name: string): void {
+    const settings = this.settings();
     const held = this.first<{ count: number }>(
       "SELECT COUNT(*) AS count FROM game_items WHERE used_at IS NULL AND participant_id = ?",
       participantId,
     );
-    if (Number(held?.count ?? 0) >= ITEM_CAP) return;
+    if (Number(held?.count ?? 0) >= settings.itemMaxHeld) return;
     const pool: GameItemKind[] = ["bonus", "double", "steal"];
     const item = pool[Math.floor(Math.random() * pool.length)];
     this.run(
@@ -2567,16 +2602,21 @@ export class ClassroomHub extends DurableObject<Env> {
       return;
     }
     this.run("UPDATE game_items SET used_at = ? WHERE id = ?", Date.now(), row.id);
+    const settings = this.settings();
     if (item === "bonus") {
-      this.addBonus(participantId, 50);
-      this.addFeed(`${name} 학생이 +50점 아이템을 사용했습니다.`, "good");
+      const bonus = settings.itemBonusPoints;
+      this.addBonus(participantId, bonus);
+      this.addFeed(`${name} 학생이 +${bonus}점 아이템을 사용했습니다.`, "good");
     } else if (item === "double") {
       this.run(
         `INSERT INTO game_effects (participant_id, double_on) VALUES (?, 1)
          ON CONFLICT (participant_id) DO UPDATE SET double_on = 1`,
         participantId,
       );
-      this.addFeed(`${name} 학생이 더블 아이템을 사용했습니다. 다음 정답은 2배!`, "good");
+      this.addFeed(
+        `${name} 학생이 더블 아이템을 사용했습니다. 다음 정답은 ${settings.itemDoubleMultiplier}배!`,
+        "good",
+      );
     } else {
       const scores = this.scoreRows();
       const leader = scores.find(
@@ -2589,7 +2629,10 @@ export class ClassroomHub extends DurableObject<Env> {
           at: Date.now(),
         });
       } else {
-        const amount = Math.max(10, Math.min(100, Math.floor(leader.points * 0.1)));
+        const amount = Math.max(
+          1,
+          Math.min(500, Math.floor((leader.points * settings.itemStealPercent) / 100)),
+        );
         this.addBonus(participantId, amount);
         this.addBonus(leader.participantId, -amount);
         this.addFeed(
@@ -3411,6 +3454,7 @@ export class ClassroomHub extends DurableObject<Env> {
       minigame: this.miniGame(),
       tools: this.toolsPublic(),
       roster: this.rosterPublic(),
+      settings: this.settings(),
     };
   }
 
@@ -3458,6 +3502,7 @@ export class ClassroomHub extends DurableObject<Env> {
         attendance: tools.attendance.filter((entry) => entry.participantId === participantId),
       },
       roster: this.rosterPublic(),
+      settings: this.settings(),
     };
   }
 
@@ -3522,3 +3567,5 @@ export class ClassroomHub extends DurableObject<Env> {
     }
   }
 }
+
+

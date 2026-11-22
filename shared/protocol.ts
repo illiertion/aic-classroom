@@ -11,7 +11,9 @@
  * object storage and no permanent media upload.
  */
 
-export const PROTOCOL_VERSION = 3;
+export const PROTOCOL_VERSION = 4;
+
+import type { ClassSettings } from "./settings";
 
 export type ClassroomStatus = "live" | "ended";
 export type TeacherRole = "teacher" | "student";
@@ -576,6 +578,7 @@ export interface ClassroomSnapshot {
   minigame: MiniGameState | null;
   tools: ClassToolsState;
   roster: RosterState;
+  settings: ClassSettings;
 }
 
 export interface StudentSnapshot {
@@ -602,6 +605,7 @@ export interface StudentSnapshot {
   minigame: MiniGameState | null;
   tools: ClassToolsState;
   roster: RosterState;
+  settings: ClassSettings;
 }
 
 export type ServerMessage =
@@ -629,6 +633,7 @@ export type ServerMessage =
   | { type: "game"; game: GameState }
   | { type: "teams"; boards: TeamBoard[] }
   | { type: "roster"; roster: RosterState }
+  | { type: "settings"; settings: ClassSettings }
   | { type: "presenter"; presenter: PresenterPick | null }
   | { type: "minigame"; game: MiniGameState | null }
   | { type: "tools"; tools: ClassToolsState }
@@ -681,6 +686,7 @@ export type ClientMessage =
   | { type: "game_teams_shuffle" }
   | { type: "team_auto" }
   | { type: "roster_set"; teamCount?: number; teamOpen?: boolean; seatRows?: number; seatCols?: number; seatOpen?: boolean }
+  | { type: "settings_set"; settings: Partial<ClassSettings> }
   | { type: "seat_assign"; to: string; seat: number | null }
   | { type: "seat_take"; seat: number }
   | { type: "team_take"; team: string }

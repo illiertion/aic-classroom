@@ -7,6 +7,7 @@ import type {
   QuizMode,
   QuizResults,
 } from "../../../shared/protocol";
+import type { ClassSettings } from "../../../shared/settings";
 import {
   Badge,
   Button,
@@ -80,6 +81,7 @@ export function GameTab({
   connected,
   studentCount,
   joinCode,
+  settings,
 }: {
   quiz: LiveQuiz | null;
   results: QuizResults | null;
@@ -88,12 +90,13 @@ export function GameTab({
   connected: boolean;
   studentCount: number;
   joinCode: string;
+  settings: ClassSettings;
 }) {
   const [sets, setSets] = useState<GameSet[]>(() => loadGameSets());
   const [selectedId, setSelectedId] = useState(() => loadGameSets()[0]?.id ?? "");
   const [questionIndex, setQuestionIndex] = useState(0);
   const [gameMode, setGameMode] = useState<GameMode>("classic");
-  const [durationSec, setDurationSec] = useState(0);
+  const [durationSec, setDurationSec] = useState(() => settings.quizSeconds || 0);
   const [error, setError] = useState<string | null>(null);
   const [projector, setProjector] = useState(false);
   const [now, setNow] = useState(() => Date.now());

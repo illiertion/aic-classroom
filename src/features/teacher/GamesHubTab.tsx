@@ -1,4 +1,4 @@
-import { useState } from "react";
+﻿import { useState } from "react";
 import type {
   ClientMessage,
   GameState,
@@ -8,6 +8,7 @@ import type {
   StudentLive,
 } from "../../../shared/protocol";
 import { cx } from "../../components/ui";
+import type { ClassSettings } from "../../../shared/settings";
 import { IconSparkles, IconTrophy } from "../../components/Icons";
 import { GameTab } from "./GameTab";
 import { MiniGameTab } from "./MiniGameTab";
@@ -26,6 +27,7 @@ export function GamesHubTab({
   connected,
   studentCount,
   joinCode,
+  settings,
 }: {
   quiz: LiveQuiz | null;
   results: QuizResults | null;
@@ -36,6 +38,7 @@ export function GamesHubTab({
   connected: boolean;
   studentCount: number;
   joinCode: string;
+  settings: ClassSettings;
 }) {
   const [view, setView] = useState<"quiz" | "mini">("quiz");
 
@@ -80,6 +83,7 @@ export function GamesHubTab({
           connected={connected}
           studentCount={studentCount}
           joinCode={joinCode}
+          settings={settings}
         />
       ) : (
         <MiniGameTab game={minigame} students={students} send={send} connected={connected} />
@@ -87,3 +91,4 @@ export function GamesHubTab({
     </div>
   );
 }
+
