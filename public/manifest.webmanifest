@@ -1,0 +1,26 @@
+{
+  "name": "AIC — All-in-One Class",
+  "short_name": "AIC",
+  "description": "선생님이 수업을 열고 학생은 QR과 이름으로 참여하는 교실 운영 플랫폼",
+  "lang": "ko",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#f4f6fb",
+  "theme_color": "#0b1220",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ]
+}

@@ -1,0 +1,40 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "aic",
+  "main": "worker/src/index.ts",
+  "compatibility_date": "2025-09-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "observability": { "enabled": true },
+
+  // Static client (vite build output). SPA fallback serves index.html for client routes.
+  "assets": {
+    "directory": "./dist/client",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application"
+  },
+
+  // Replace database_id with `wrangler d1 create aic-db` output before deploying.
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "aic-db",
+      "database_id": "00000000-0000-0000-0000-000000000000",
+      "migrations_dir": "database/migrations"
+    }
+  ],
+
+
+  "durable_objects": {
+    "bindings": [{ "name": "CLASSROOM_HUB", "class_name": "ClassroomHub" }]
+  },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["ClassroomHub"] }],
+
+  // Daily sweep removes temporary participants of ended classes.
+  "triggers": {
+    "crons": ["17 3 * * *"]
+  },
+
+  "vars": {
+    "APP_NAME": "AIC"
+  }
+}
