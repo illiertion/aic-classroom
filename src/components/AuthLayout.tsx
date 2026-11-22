@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+﻿import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { Logo } from "./Logo";
 import { IconCheck, IconEye, IconLock, IconMonitor } from "./Icons";
@@ -38,8 +38,8 @@ export function AuthLayout({
           </p>
           <ul className="mt-8 space-y-3">
             {[
-              "계정 없이 비밀번호 하나로 입장",
-              "비밀번호는 Cloudflare secret에만 보관",
+              "이름과 액세스 코드만으로 입장",
+              "액세스 코드는 D1에만 저장",
               "QR·참가 코드로 학생 입장",
               "보드·PDF는 선생님 PC에, 업로드 없음",
             ].map((item) => (
@@ -78,10 +78,11 @@ export function AuthLayout({
           <div className="mt-6 text-[12.5px] text-slate-500">{footer}</div>
         </div>
         <p className="mx-auto w-full max-w-[400px] text-[11px] leading-relaxed text-slate-400">
-          선생님 비밀번호는 Cloudflare에서만 확인하며 AIC 데이터베이스에 저장하지 않습니다. 학생의
+          액세스 코드는 AIC 데이터베이스에만 저장되고 학생에게는 절대 보이지 않습니다. 학생의
           이름은 수업 단위로만 사용되고 수업을 종료하면 바로 정리됩니다.
         </p>
       </main>
     </div>
   );
 }
+

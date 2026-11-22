@@ -238,7 +238,7 @@ export default function Landing() {
             <div className="mt-8 flex flex-wrap items-center gap-3">
               <Link to={teacher ? "/app" : "/login"}>
                 <Button size="lg">
-                  {teacher ? "내 수업 열기" : "비밀번호로 입장"}
+                  {teacher ? "내 수업 열기" : "선생님 입장"}
                   <IconArrowRight size={17} />
                 </Button>
               </Link>
@@ -463,4 +463,5 @@ export default function Landing() {
     </div>
   );
 }
+
 
