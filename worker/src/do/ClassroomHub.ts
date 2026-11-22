@@ -173,6 +173,8 @@ interface CardRow {
   author: string;
   column_name: string | null;
   created_at: number;
+  pos_x: number | null;
+  pos_y: number | null;
 }
 
 const EVENT_TYPES: ReadonlySet<string> = new Set<FocusEventType>([
@@ -342,13 +344,26 @@ const SCHEMA = [
     allow_posts INTEGER NOT NULL DEFAULT 0,
     updated_at INTEGER NOT NULL
   )`,
-  `CREATE TABLE IF NOT EXISTS board_cards (
-    id TEXT PRIMARY KEY,
+  `CREATE TABLE IF NOT EXISTS board_cards (    id TEXT PRIMARY KEY,
     board_id TEXT NOT NULL,
     text TEXT NOT NULL,
     color TEXT NOT NULL DEFAULT 'yellow',
     author TEXT NOT NULL,
     column_name TEXT,
+    created_at INTEGER NOT NULL,
+    pos_x INTEGER,
+    pos_y INTEGER
+  )`,
+  `CREATE TABLE IF NOT EXISTS board_likes (
+    card_id TEXT NOT NULL,
+    participant_id TEXT NOT NULL,
+    PRIMARY KEY (card_id, participant_id)
+  )`,
+  `CREATE TABLE IF NOT EXISTS board_comments (
+    id TEXT PRIMARY KEY,
+    card_id TEXT NOT NULL,
+    author TEXT NOT NULL,
+    text TEXT NOT NULL,
     created_at INTEGER NOT NULL
   )`,
   `CREATE TABLE IF NOT EXISTS team_posts (
@@ -419,6 +434,8 @@ const COLUMN_MIGRATIONS = [
   "ALTER TABLE live ADD COLUMN seat INTEGER",
   "ALTER TABLE quiz ADD COLUMN pairs_json TEXT",
   "ALTER TABLE quiz ADD COLUMN surface TEXT NOT NULL DEFAULT 'quiz'",
+  "ALTER TABLE board_cards ADD COLUMN pos_x INTEGER",
+  "ALTER TABLE board_cards ADD COLUMN pos_y INTEGER",
 ];
 
 const GAME_ITEM_KINDS: ReadonlySet<string> = new Set(["double", "steal", "bonus"]);
@@ -1060,7 +1077,27 @@ export class ClassroomHub extends DurableObject<Env> {
         const cardId = typeof data.cardId === "string" ? data.cardId.slice(0, 80) : "";
         if (!cardId) return;
         this.run("DELETE FROM board_cards WHERE id = ?", cardId);
+        this.removeCardExtras(cardId);
         this.broadcastBoard();
+        return;
+      }
+      case "board_like": {
+        this.toggleLike(data.cardId, "teacher", "선생님");
+        return;
+      }
+      case "board_comment": {
+        this.addComment(data.cardId, "선생님", data.text);
+        return;
+      }
+      case "board_comment_remove": {
+        const commentId = typeof data.commentId === "string" ? data.commentId.slice(0, 80) : "";
+        if (!commentId) return;
+        this.run("DELETE FROM board_comments WHERE id = ?", commentId);
+        this.broadcastBoard();
+        return;
+      }
+      case "board_move": {
+        this.moveCard(data.cardId, data.x, data.y);
         return;
       }
       case "file_chunk": {
@@ -1404,6 +1441,23 @@ export class ClassroomHub extends DurableObject<Env> {
           return;
         }
         this.addCard(name, data.text, data.color, data.column, false);
+        return;
+      }
+      case "board_like": {
+        this.toggleLike(data.cardId, participantId, name);
+        return;
+      }
+      case "board_comment": {
+        this.addComment(data.cardId, name, data.text);
+        return;
+      }
+      case "board_move": {
+        const card = this.first<CardRow>(
+          "SELECT * FROM board_cards WHERE id = ?",
+          typeof data.cardId === "string" ? data.cardId.slice(0, 80) : "",
+        );
+        if (!card || card.author !== name.slice(0, 40)) return;
+        this.moveCard(data.cardId, data.x, data.y);
         return;
       }
       case "file_request": {
@@ -2779,17 +2833,108 @@ export class ClassroomHub extends DurableObject<Env> {
   }
 
   private boardCards(boardId: string): BoardCard[] {
+    const comments = this.rows<{ id: string; card_id: string; author: string; text: string; created_at: number }>(
+      "SELECT * FROM board_comments ORDER BY created_at ASC",
+    );
+    const likes = this.rows<{ card_id: string; participant_id: string }>(
+      "SELECT card_id, participant_id FROM board_likes",
+    );
     return this.rows<CardRow>(
       "SELECT * FROM board_cards WHERE board_id = ? ORDER BY created_at ASC",
       boardId,
-    ).map((row) => ({
-      id: row.id,
-      text: row.text,
-      color: (BOARD_COLORS.has(row.color) ? row.color : "yellow") as BoardColor,
-      author: row.author,
-      column: row.column_name,
-      createdAt: row.created_at,
-    }));
+    ).map((row) => {
+      const likedBy = likes.filter((like) => like.card_id === row.id).map((like) => like.participant_id);
+      return {
+        id: row.id,
+        text: row.text,
+        color: (BOARD_COLORS.has(row.color) ? row.color : "yellow") as BoardColor,
+        author: row.author,
+        column: row.column_name,
+        createdAt: row.created_at,
+        x: row.pos_x === null || row.pos_x === undefined ? null : Number(row.pos_x),
+        y: row.pos_y === null || row.pos_y === undefined ? null : Number(row.pos_y),
+        likes: likedBy.length,
+        likedBy,
+        comments: comments
+          .filter((comment) => comment.card_id === row.id)
+          .map((comment) => ({
+            id: comment.id,
+            author: comment.author,
+            text: comment.text,
+            createdAt: comment.created_at,
+          })),
+      };
+    });
+  }
+
+  private removeCardExtras(cardId: string): void {
+    this.run("DELETE FROM board_likes WHERE card_id = ?", cardId);
+    this.run("DELETE FROM board_comments WHERE card_id = ?", cardId);
+  }
+
+  /** 카드 하트(좋아요) 켜고 끄기. */
+  private toggleLike(rawCardId: unknown, participantId: string, _author: string): void {
+    const cardId = typeof rawCardId === "string" ? rawCardId.slice(0, 80) : "";
+    if (!cardId) return;
+    const card = this.first<CardRow>("SELECT * FROM board_cards WHERE id = ?", cardId);
+    if (!card) return;
+    const liked = this.first<{ card_id: string }>(
+      "SELECT card_id FROM board_likes WHERE card_id = ? AND participant_id = ?",
+      cardId,
+      participantId,
+    );
+    if (liked) {
+      this.run("DELETE FROM board_likes WHERE card_id = ? AND participant_id = ?", cardId, participantId);
+    } else {
+      this.run("INSERT INTO board_likes (card_id, participant_id) VALUES (?, ?)", cardId, participantId);
+    }
+    this.broadcastBoard();
+  }
+
+  private addComment(rawCardId: unknown, author: string, rawText: unknown): void {
+    const cardId = typeof rawCardId === "string" ? rawCardId.slice(0, 80) : "";
+    const text =
+      typeof rawText === "string" ? rawText.trim().replace(/\s+/g, " ").slice(0, 160) : "";
+    if (!cardId || !text) return;
+    const card = this.first<CardRow>("SELECT * FROM board_cards WHERE id = ?", cardId);
+    if (!card) return;
+    const board = this.boardRow();
+    if (board && board.allow_posts !== 1 && author !== "선생님") return;
+    const count = Number(
+      this.first<{ count: number }>(
+        "SELECT COUNT(*) AS count FROM board_comments WHERE card_id = ?",
+        cardId,
+      )?.count ?? 0,
+    );
+    if (count >= 200) return;
+    this.run(
+      "INSERT INTO board_comments (id, card_id, author, text, created_at) VALUES (?, ?, ?, ?, ?)",
+      randomId("cmt_"),
+      cardId,
+      author.slice(0, 40) || "학생",
+      text,
+      Date.now(),
+    );
+    this.broadcastBoard();
+  }
+
+  /** 카드를 벽면 좌표로 옮깁니다(6px 단위로 스냅). */
+  private moveCard(rawCardId: unknown, rawX: unknown, rawY: unknown): void {
+    const cardId = typeof rawCardId === "string" ? rawCardId.slice(0, 80) : "";
+    if (!cardId) return;
+    const snap = (value: unknown) => {
+      const parsed = Number(value);
+      if (!Number.isFinite(parsed)) return 0;
+      return Math.min(4000, Math.max(0, Math.round(parsed / 6) * 6));
+    };
+    this.run(
+      "UPDATE board_cards SET pos_x = ?, pos_y = ? WHERE id = ?",
+      snap(rawX),
+      snap(rawY),
+      cardId,
+    );
+    this.run("UPDATE board SET updated_at = ?", Date.now());
+    this.broadcastBoard();
   }
 
   private boardPublic(): LiveBoard | null {

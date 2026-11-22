@@ -1,4 +1,4 @@
-import type { ReactNode, SVGProps } from "react";
+﻿import type { ReactNode, SVGProps } from "react";
 
 type IconProps = SVGProps<SVGSVGElement> & { size?: number };
 
@@ -256,3 +256,11 @@ export const IconTrophy = createIcon(
     <path d="M12 13v4M8.5 20h7M9.5 20c0-1.8 1-3 2.5-3s2.5 1.2 2.5 3" />
   </>
 );
+
+export const IconHeart = createIcon(
+  <path d="M12 20s-7-4.35-7-9.5A3.5 3.5 0 0 1 12 7a3.5 3.5 0 0 1 7 3.5C19 15.65 12 20 12 20Z" />,
+);
+export const IconChat = createIcon(
+  <path d="M21 12a8 8 0 0 1-8 8H8l-4 3v-6.5A8 8 0 1 1 21 12Z" />,
+);
+

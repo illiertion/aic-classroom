@@ -1,4 +1,4 @@
-import type { BoardCard, BoardColor, BoardLayout, LiveBoard } from "../../shared/protocol";
+﻿import type { BoardCard, BoardColor, BoardComment, BoardLayout, LiveBoard } from "../../shared/protocol";
 
 /**
  * Saved activity boards live in the teacher's browser (IndexedDB), not on the
@@ -84,6 +84,11 @@ export function boardCard(text: string, author: string, color: BoardColor = "yel
     author,
     column,
     createdAt: Date.now(),
+    x: null,
+    y: null,
+    likes: 0,
+    likedBy: [],
+    comments: [],
   };
 }
 
@@ -179,7 +184,12 @@ function normalizeBoard(value: unknown): SavedBoard | null {
             column:
               typeof entry.column === "string" && columns.includes(entry.column) ? entry.column : null,
             createdAt: Number.isFinite(entry.createdAt) ? Number(entry.createdAt) : Date.now(),
-          } satisfies BoardCard;
+            x: Number.isFinite(entry.x as number) ? Number(entry.x) : null,
+            y: Number.isFinite(entry.y as number) ? Number(entry.y) : null,
+            likes: 0,
+            likedBy: [] as string[],
+            comments: [] as BoardComment[],
+          };
         })
         .filter((card): card is BoardCard => card !== null)
         .slice(0, 200)
@@ -277,3 +287,5 @@ export function downloadText(filename: string, text: string): void {
   anchor.click();
   window.setTimeout(() => URL.revokeObjectURL(url), 4000);
 }
+
+

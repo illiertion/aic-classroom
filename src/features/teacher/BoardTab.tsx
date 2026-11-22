@@ -9,6 +9,7 @@ import {
   saveBoard,
   type SavedBoard,
 } from "../../lib/boardStore";
+import { BoardCanvas } from "../../components/BoardCanvas";
 import {
   Badge,
   Button,
@@ -363,33 +364,24 @@ export function BoardTab({
                     })}
                   </div>
                 ) : (
-                  <div className="grid gap-2.5 sm:grid-cols-2 xl:grid-cols-3">
-                    {board.cards.length === 0 ? (
-                      <p className="col-span-full py-6 text-center text-[12px] text-slate-400">
-                        첫 카드를 추가하거나 학생의 글을 기다려 보세요.
-                      </p>
-                    ) : null}
-                    {board.cards.map((card) => (
-                      <div
-                        key={card.id}
-                        className={cx(
-                          "group relative rounded-xl p-3.5 text-[12.5px] leading-relaxed ring-1",
-                          COLOR_CLASS[card.color] ?? COLOR_CLASS.yellow,
-                        )}
-                      >
-                        <p className="whitespace-pre-wrap pr-5">{card.text}</p>
-                        <p className="mt-1.5 text-[10px] opacity-60">
-                          {card.author} · {formatTime(card.createdAt)}
-                        </p>
-                        <button
-                          onClick={() => send({ type: "board_delete", cardId: card.id })}
-                          className="absolute right-2 top-2 rounded p-1 opacity-0 transition hover:bg-black/5 group-hover:opacity-100"
-                          aria-label="카드 삭제"
-                        >
-                          <IconTrash size={12} />
-                        </button>
-                      </div>
-                    ))}
+                  <div className="space-y-2">
+                    <p className="flex items-center gap-1.5 text-[10.5px] text-slate-400">
+                      <IconInfo size={12} /> 카드를 끌어서 자리를 옮길 수 있습니다. 하트·댓글로
+                      반응을 모으고, 학생 화면에도 그대로 보입니다.
+                    </p>
+                    <BoardCanvas
+                      cards={board.cards}
+                      colorClass={COLOR_CLASS}
+                      canMove
+                      canDelete
+                      canComment
+                      onMove={(cardId, x, y) => send({ type: "board_move", cardId, x, y })}
+                      onLike={(cardId) => send({ type: "board_like", cardId })}
+                      onComment={(cardId, text) => send({ type: "board_comment", cardId, text })}
+                      onCommentRemove={(commentId) => send({ type: "board_comment_remove", commentId })}
+                      onDelete={(cardId) => send({ type: "board_delete", cardId })}
+                      height={480}
+                    />
                   </div>
                 )}
               </div>

@@ -484,6 +484,13 @@ export interface PadletResolved {
 
 export type BoardColor = "yellow" | "rose" | "sky" | "emerald" | "violet" | "slate";
 
+export interface BoardComment {
+  id: string;
+  author: string;
+  text: string;
+  createdAt: number;
+}
+
 export interface BoardCard {
   id: string;
   text: string;
@@ -491,6 +498,13 @@ export interface BoardCard {
   author: string;
   column: string | null;
   createdAt: number;
+  /** 벽면형 자유 배치 좌표(px). null이면 자동 배치입니다. */
+  x: number | null;
+  y: number | null;
+  /** 하트(좋아요) 수와 누른 사람 목록. */
+  likes: number;
+  likedBy: string[];
+  comments: BoardComment[];
 }
 
 export type BoardLayout = "wall" | "columns";
@@ -737,6 +751,10 @@ export type ClientMessage =
   | { type: "board_close" }
   | { type: "board_add"; text: string; color?: BoardColor; column?: string | null }
   | { type: "board_delete"; cardId: string }
+  | { type: "board_like"; cardId: string }
+  | { type: "board_comment"; cardId: string; text: string }
+  | { type: "board_comment_remove"; commentId: string }
+  | { type: "board_move"; cardId: string; x: number; y: number }
   | {
       type: "stage_set";
       kind: StageKind;

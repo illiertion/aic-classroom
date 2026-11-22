@@ -29,6 +29,7 @@ import type {
   WorksheetState,
 } from "../../shared/protocol";
 import { DEFAULT_SETTINGS, type ClassSettings } from "../../shared/settings";
+import { BoardCanvas } from "../components/BoardCanvas";
 import { teamLabels, teamTone } from "../../shared/roster";
 import { LogoMark } from "../components/Logo";
 import { LiveVideo } from "../components/LiveVideo";
@@ -117,6 +118,10 @@ function StageOverlay({
   allowPosts,
   ended,
   onAddCard,
+  selfId,
+  onLikeCard,
+  onComment,
+  onMoveCard,
   onHide,
 }: {
   stage: StageContent;
@@ -124,6 +129,10 @@ function StageOverlay({
   allowPosts: boolean;
   ended: boolean;
   onAddCard: (text: string) => void;
+  selfId: string | null;
+  onLikeCard: (cardId: string) => void;
+  onComment: (cardId: string, text: string) => void;
+  onMoveCard: (cardId: string, x: number, y: number) => void;
   onHide: () => void;
 }) {
   const boxRef = useRef<HTMLDivElement>(null);
@@ -276,25 +285,22 @@ function StageOverlay({
                       </div>
                     </div>
                   ) : null}
-                  <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                    {board.cards.map((card) => (
-                      <div
-                        key={card.id}
-                        className={cx(
-                          "rounded-xl p-4 text-[clamp(14px,1.6vw,20px)] leading-relaxed ring-1",
-                          BOARD_CARD_CLASS[card.color] ?? BOARD_CARD_CLASS.yellow,
-                        )}
-                      >
-                        <p className="whitespace-pre-wrap">{card.text}</p>
-                        <p className="mt-2 text-[10px] opacity-60">{card.author}</p>
-                      </div>
-                    ))}
-                    {board.cards.length === 0 ? (
-                      <p className="col-span-full py-10 text-center text-[13px] text-slate-400">
-                        아직 카드가 없습니다.
-                      </p>
-                    ) : null}
+                  <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                    <p className="flex items-center gap-1.5 text-[11px] text-slate-400">
+                      카드를 끌어서 옮기고, 하트와 댓글로 반응을 남겨 보세요.
+                    </p>
                   </div>
+                  <BoardCanvas
+                    cards={board.cards}
+                    colorClass={BOARD_CARD_CLASS}
+                    selfId={selfId}
+                    canMove
+                    canComment={allowPosts && !ended}
+                    onMove={onMoveCard}
+                    onLike={onLikeCard}
+                    onComment={onComment}
+                    height={440}
+                  />
                 </>
               )}
             </div>
@@ -635,6 +641,19 @@ export default function StudentRoom() {
   });
   const { send: socketSend, status: socketStatus } = socket;
   const adoptedShare = useRef(false);
+
+  const onLikeCard = useCallback(
+    (cardId: string) => socketSend({ type: "board_like", cardId }),
+    [socketSend],
+  );
+  const onComment = useCallback(
+    (cardId: string, text: string) => socketSend({ type: "board_comment", cardId, text }),
+    [socketSend],
+  );
+  const onMoveCard = useCallback(
+    (cardId: string, x: number, y: number) => socketSend({ type: "board_move", cardId, x, y }),
+    [socketSend],
+  );
 
   const screenShare = useStudentScreenShare({
     send: socketSend,
@@ -1948,24 +1967,21 @@ export default function StudentRoom() {
                   })}
                 </div>
               ) : (
-                <div className="grid gap-2.5 sm:grid-cols-2">
-                  {board.cards.length === 0 ? (
-                    <p className="col-span-full py-4 text-center text-[11.5px] text-slate-400">
-                      아직 카드가 없습니다.
-                    </p>
-                  ) : null}
-                  {board.cards.map((card) => (
-                    <div
-                      key={card.id}
-                      className={cx(
-                        "rounded-xl p-3 text-[12.5px] leading-relaxed ring-1",
-                        BOARD_CARD_CLASS[card.color] ?? BOARD_CARD_CLASS.yellow,
-                      )}
-                    >
-                      <p className="whitespace-pre-wrap">{card.text}</p>
-                      <p className="mt-1.5 text-[10px] opacity-60">{card.author}</p>
-                    </div>
-                  ))}
+                <div className="space-y-2">
+                  <p className="text-[10.5px] text-slate-400">
+                    카드를 끌어서 옮기고, 하트·댓글로 반응을 남길 수 있습니다.
+                  </p>
+                  <BoardCanvas
+                    cards={board.cards}
+                    colorClass={BOARD_CARD_CLASS}
+                    selfId={stored.participantId}
+                    canMove
+                    canComment={canPostToBoard && !ended}
+                    onMove={onMoveCard}
+                    onLike={onLikeCard}
+                    onComment={onComment}
+                    height={380}
+                  />
                 </div>
               )}
 
@@ -2087,6 +2103,10 @@ export default function StudentRoom() {
             })
           }
           onHide={() => setStageHidden(stage.id)}
+          selfId={stored.participantId}
+          onLikeCard={onLikeCard}
+          onComment={onComment}
+          onMoveCard={onMoveCard}
         />
       ) : null}
 
