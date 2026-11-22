@@ -627,26 +627,6 @@ export default function ClassroomConsole() {
             <ScreenShareTab students={students} share={screenShare} />
           </div>
         ) : null}
-        {tab === "teams" ? (
-          <div className="space-y-6">
-            <TeamTab
-              students={students}
-              boards={teamBoards}
-              presenter={presenter}
-              roster={roster}
-              settings={settings}
-              send={socket.send}
-              connected={socket.status === "open" && classroom.status === "live"}
-            />
-            <ToolboxTab
-              tools={tools}
-              students={students}
-              roster={roster}
-              send={socket.send}
-              connected={socket.status === "open" && classroom.status === "live"}
-            />
-          </div>
-        ) : null}
         {tab === "monitor" ? (
           <MonitorTab
             students={students}
@@ -671,24 +651,24 @@ export default function ClassroomConsole() {
           />
         ) : null}
         {tab === "teams" ? (
-          <div className="space-y-6">
-            <TeamTab
-              students={students}
-              boards={teamBoards}
-              presenter={presenter}
-              roster={roster}
-              settings={settings}
-              send={socket.send}
-              connected={socket.status === "open" && classroom.status === "live"}
-            />
-            <ToolboxTab
-              tools={tools}
-              students={students}
-              roster={roster}
-              send={socket.send}
-              connected={socket.status === "open" && classroom.status === "live"}
-            />
-          </div>
+          <TeamTab
+            students={students}
+            boards={teamBoards}
+            presenter={presenter}
+            roster={roster}
+            settings={settings}
+            send={socket.send}
+            connected={socket.status === "open" && classroom.status === "live"}
+          />
+        ) : null}
+        {tab === "toolbox" ? (
+          <ToolboxTab
+            tools={tools}
+            students={students}
+            roster={roster}
+            send={socket.send}
+            connected={socket.status === "open" && classroom.status === "live"}
+          />
         ) : null}
         {tab === "settings" ? (
           <div className="space-y-6">

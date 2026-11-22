@@ -10,6 +10,7 @@ import {
   CopyButton,
   EmptyState,
   Field,
+  Input,
   Select,
   cx,
 } from "../../components/ui";
@@ -211,6 +212,19 @@ export function ToolboxTab({
   const [step, setStep] = useState(1);
   // 도구는 기본으로 덮어 두고, 버튼을 눌러서 열어 씁니다.
   const [openTool, setOpenTool] = useState<string | null>(null);
+  const [query, setQuery] = useState("");
+  const TOOL_LIST: [string, string, string][] = [
+    ["score", "🏆 모둠 점수판", "점수 모둠 +1 +5 +10 점수판 초기화"],
+    ["attendance", "✅ 출석 체크", "출석 체크 출석 명단 확인 누구"],
+    ["noise", "🔊 소음 측정기", "소음 시끄러움 마이크 소리 수준"],
+    ["stopwatch", "⏱ 스톱워치", "스톱워치 시간 재기 구간 랩 타이머"],
+  ];
+  const keyword = query.replace(/\s+/g, "").toLowerCase();
+  const visibleTools = keyword
+    ? TOOL_LIST.filter(([, label, tags]) =>
+        `${label}${tags}`.replace(/\s+/g, "").toLowerCase().includes(keyword),
+      )
+    : TOOL_LIST;
   const online = students.filter((student) => student.online);
   const checkedIn = useMemo(
     () => new Set(tools.attendance.map((entry) => entry.participantId)),
@@ -228,33 +242,52 @@ export function ToolboxTab({
         선생님 화면에서만 동작하고 아무것도 저장하지 않습니다.
       </Callout>
 
-      <div className="flex flex-wrap gap-2">
-        {(
-          [
-            ["score", "🏆 모둠 점수판"],
-            ["attendance", "✅ 출석 체크"],
-            ["noise", "🔊 소음 측정기"],
-            ["stopwatch", "⏱ 스톱워치"],
-          ] as [string, string][]
-        ).map(([id, label]) => (
-          <button
-            key={id}
-            type="button"
-            onClick={() => setOpenTool((current) => (current === id ? null : id))}
-            className={cx(
-              "rounded-xl px-3.5 py-2 text-[12.5px] font-bold ring-1 transition",
-              openTool === id
-                ? "bg-slate-900 text-white ring-slate-900"
-                : "bg-white text-slate-600 ring-slate-200 hover:bg-slate-50",
-            )}
-          >
-            {label}
-          </button>
-        ))}
+      <div className="space-y-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <Input
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder="도구 검색: 점수, 출석, 소음, 시간…"
+            maxLength={40}
+            className="h-9 w-full max-w-[240px] text-[12px]"
+            aria-label="도구 검색"
+          />
+          {query ? (
+            <Button size="sm" variant="ghost" onClick={() => setQuery("")}>
+              <IconX size={13} /> 지우기
+            </Button>
+          ) : null}
+          {openTool ? (
+            <Button size="sm" variant="secondary" onClick={() => setOpenTool(null)}>
+              열린 도구 닫기
+            </Button>
+          ) : null}
+        </div>
+        {visibleTools.length === 0 ? (
+          <p className="text-[11.5px] text-slate-400">검색 결과가 없습니다. 다른 키워드로 찾아 보세요.</p>
+        ) : (
+          <div className="flex flex-wrap gap-2">
+            {visibleTools.map(([id, label]) => (
+              <button
+                key={id}
+                type="button"
+                onClick={() => setOpenTool((current) => (current === id ? null : id))}
+                className={cx(
+                  "rounded-xl px-3.5 py-2 text-[12.5px] font-bold ring-1 transition",
+                  openTool === id
+                    ? "bg-slate-900 text-white ring-slate-900"
+                    : "bg-white text-slate-600 ring-slate-200 hover:bg-slate-50",
+                )}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
-      <div className="grid gap-4 xl:grid-cols-2">
-        {openTool === "score" ? (
+      {/* 열린 도구는 버튼 바로 아래에 붙어서 빈칸 없이 채웁니다. */}
+      {openTool === "score" ? (
         <Card className="overflow-hidden">
           <div className="border-b border-slate-100 px-5 py-4">
             <CardHeader
@@ -427,7 +460,6 @@ export function ToolboxTab({
           </div>
         </Card>
         ) : null}
-      </div>
 
       <div className="grid gap-4 sm:grid-cols-2">
         <Card className="p-4">
