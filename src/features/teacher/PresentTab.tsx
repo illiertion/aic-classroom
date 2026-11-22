@@ -3,11 +3,14 @@ import type {
   ClassTimer,
   ClientMessage,
   LiveBoard,
+  LiveQuiz,
+  QuizResults,
   StageContent,
   StageKind,
   StudentLive,
 } from "../../../shared/protocol";
 import type { ClassSettings } from "../../../shared/settings";
+import { NoticeQuiz } from "./NoticeQuiz";
 import {
   Avatar,
   Badge,
@@ -127,6 +130,8 @@ export function PresentTab({
   send,
   connected,
   settings,
+  quiz,
+  results,
 }: {
   stage: StageContent | null;
   timer: ClassTimer | null;
@@ -135,6 +140,8 @@ export function PresentTab({
   send: (message: ClientMessage) => void;
   connected: boolean;
   settings: ClassSettings;
+  quiz: LiveQuiz | null;
+  results: QuizResults | null;
 }) {
   const [kind, setKind] = useState<StageKind>("url");
   const [title, setTitle] = useState("");
@@ -595,6 +602,14 @@ export function PresentTab({
           </div>
         </Card>
 
+        <NoticeQuiz
+          quiz={quiz}
+          results={results}
+          settings={settings}
+          connected={connected}
+          send={send}
+        />
+
         <Callout tone="warn" icon={<IconAlert size={15} />} title="전체화면은 학생이 한 번 눌러야">
           브라우저 보안 정책상 다른 기기의 화면을 강제로 전체화면으로 바꿀 수는 없습니다. “전체화면
           요청”을 켜면 학생 화면에 큰 안내와 버튼이 뜨고, 누르는 즉시 전체화면으로 전환됩니다.
@@ -608,4 +623,5 @@ export function PresentTab({
     </div>
   );
 }
+
 

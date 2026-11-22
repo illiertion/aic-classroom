@@ -113,6 +113,7 @@ interface QuizRow {
   ends_at: number | null;
   game_mode: string;
   pairs_json: string | null;
+  surface: string | null;
 }
 
 interface AnswerRow {
@@ -416,6 +417,7 @@ const COLUMN_MIGRATIONS = [
   "ALTER TABLE worksheet_submissions ADD COLUMN locked INTEGER NOT NULL DEFAULT 1",
   "ALTER TABLE live ADD COLUMN seat INTEGER",
   "ALTER TABLE quiz ADD COLUMN pairs_json TEXT",
+  "ALTER TABLE quiz ADD COLUMN surface TEXT NOT NULL DEFAULT 'quiz'",
 ];
 
 const GAME_ITEM_KINDS: ReadonlySet<string> = new Set(["double", "steal", "bonus"]);
@@ -738,6 +740,7 @@ export class ClassroomHub extends DurableObject<Env> {
           }
         }
         const id = randomId("quiz_");
+        const surface = data.surface === "notice" ? "notice" : "quiz";
         const gameMode: GameMode = GAME_MODES.has(String(data.gameMode))
           ? (data.gameMode as GameMode)
           : "classic";
@@ -770,8 +773,8 @@ export class ClassroomHub extends DurableObject<Env> {
         this.setConfig("game_lobby", "0");
         this.run(
           `INSERT INTO quiz
-            (id, prompt, mode, options_json, correct_option, correct_text, status, started_at, closed_at, round, duration_sec, ends_at, game_mode, pairs_json)
-           VALUES (?, ?, ?, ?, ?, ?, 'open', ?, NULL, ?, ?, ?, ?, ?)`,
+            (id, prompt, mode, options_json, correct_option, correct_text, status, started_at, closed_at, round, duration_sec, ends_at, game_mode, pairs_json, surface)
+           VALUES (?, ?, ?, ?, ?, ?, 'open', ?, NULL, ?, ?, ?, ?, ?, ?)`,
           id,
           prompt,
           mode,
@@ -784,6 +787,7 @@ export class ClassroomHub extends DurableObject<Env> {
           durationSec ? now + durationSec * 1000 : null,
           gameMode,
           pairs.length ? JSON.stringify(pairs) : null,
+          surface,
         );
         this.setConfig("total_rounds", String(totalRounds));
         this.broadcastQuiz();
@@ -3010,6 +3014,7 @@ export class ClassroomHub extends DurableObject<Env> {
       endsAt: row.ends_at === null ? null : Number(row.ends_at),
       lefts: pairs.map((pair) => pair.left),
       rights: pairs.map((pair) => pair.right),
+      surface: row.surface === "notice" ? "notice" : "quiz",
     };
   }
 

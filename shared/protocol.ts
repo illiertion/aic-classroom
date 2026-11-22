@@ -325,6 +325,8 @@ export interface LiveQuiz {
   durationSec: number | null;
   /** Absolute end time; past it answers are rejected. */
   endsAt: number | null;
+  /** 'notice'면 학생 알림 영역에 작은 문제로 표시됩니다. */
+  surface: "quiz" | "notice";
   /** 짝 연결(connect) 문제의 왼쪽 항목. 오른쪽은 섞여서 내려갑니다. */
   lefts: string[];
   rights: string[];
@@ -679,6 +681,8 @@ export type ClientMessage =
       round?: number;
       totalRounds?: number;
       pairs?: QuizPair[];
+      /** 'notice'면 프로젝터 없이 알림으로 보냅니다. */
+      surface?: "quiz" | "notice";
     }
   | { type: "quiz_close" }
   | { type: "game_reset" }

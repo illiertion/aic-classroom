@@ -650,6 +650,8 @@ export default function ClassroomConsole() {
             send={socket.send}
             connected={socket.status === "open" && classroom.status === "live"}
             settings={settings}
+            quiz={quiz}
+            results={quizResults}
           />
         ) : null}
         {tab === "monitor" ? (

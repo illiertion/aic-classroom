@@ -1575,6 +1575,11 @@ export default function StudentRoom() {
                   >
                     {eliminated ? "탈락" : quizOpen ? "응답 가능" : "응답 마감"}
                   </Badge>
+                  {quiz.surface === "notice" ? (
+                    <Badge tone="info" className="text-[10px]">
+                      쪽지 문제
+                    </Badge>
+                  ) : null}
                 </div>
               </div>
               <p className="mt-2 text-[18px] font-bold leading-snug tracking-tight">{quiz.prompt}</p>
