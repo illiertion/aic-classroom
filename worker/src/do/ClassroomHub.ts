@@ -62,6 +62,7 @@ import {
   isTeamLabel,
   normalizeRoster,
   seatCapacity,
+  teamIndexOf,
   teamLabels,
 } from "../../../shared/roster";
 
@@ -2406,7 +2407,7 @@ export class ClassroomHub extends DurableObject<Env> {
     });
   }
 
-  /** 자리 뽑기: 그리드 크기를 정하고 학생을 무작위 순서로 배치합니다. */
+  /** 자리 뽑기: 설정된 규칙(무작위·이름순·입장순·모둠별)으로 학생을 배치합니다. */
   private shuffleSeats(rawRows: unknown, rawCols: unknown): void {
     const current = this.rosterPublic();
     const roster = normalizeRoster({
@@ -2425,18 +2426,32 @@ export class ClassroomHub extends DurableObject<Env> {
     });
     this.setConfig("roster", JSON.stringify(roster));
     const capacity = seatCapacity(roster);
-    const indexes = Array.from({ length: capacity }, (_, index) => index);
-    for (let index = indexes.length - 1; index > 0; index -= 1) {
-      const swap = Math.floor(Math.random() * (index + 1));
-      [indexes[index], indexes[swap]] = [indexes[swap], indexes[index]];
-    }
-    const rows = this.rows<{ participant_id: string }>(
-      "SELECT participant_id FROM live ORDER BY joined_at ASC",
+    const rule = this.settings().seatRule;
+    const slots = Array.from({ length: capacity }, (_, index) => index);
+    const students = this.rows<{ participant_id: string; name: string; team: string | null }>(
+      "SELECT participant_id, name, team FROM live ORDER BY joined_at ASC",
     );
-    rows.forEach((row, index) => {
+    if (rule === "random") {
+      for (let index = slots.length - 1; index > 0; index -= 1) {
+        const swap = Math.floor(Math.random() * (index + 1));
+        [slots[index], slots[swap]] = [slots[swap], slots[index]];
+      }
+    }
+    if (rule === "name") {
+      students.sort((a, b) => a.name.localeCompare(b.name, "ko"));
+    }
+    if (rule === "team") {
+      students.sort((a, b) => {
+        const left = teamIndexOf(a.team) ?? 99;
+        const right = teamIndexOf(b.team) ?? 99;
+        if (left !== right) return left - right;
+        return a.name.localeCompare(b.name, "ko");
+      });
+    }
+    students.forEach((row, index) => {
       this.run(
         "UPDATE live SET seat = ? WHERE participant_id = ?",
-        index < capacity ? indexes[index] : null,
+        index < capacity ? slots[index] : null,
         row.participant_id,
       );
     });
@@ -3580,5 +3595,7 @@ export class ClassroomHub extends DurableObject<Env> {
     }
   }
 }
+
+
 
 

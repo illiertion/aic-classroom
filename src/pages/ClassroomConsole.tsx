@@ -716,6 +716,7 @@ export default function ClassroomConsole() {
             boards={teamBoards}
             presenter={presenter}
             roster={roster}
+            settings={settings}
             send={socket.send}
             connected={socket.status === "open" && classroom.status === "live"}
           />

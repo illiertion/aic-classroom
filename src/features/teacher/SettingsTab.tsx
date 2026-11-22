@@ -1,6 +1,6 @@
 ﻿import { useEffect, useState } from "react";
 import type { ClientMessage } from "../../../shared/protocol";
-import { DEFAULT_SETTINGS, type ClassSettings } from "../../../shared/settings";
+import { DEFAULT_SETTINGS, SEAT_RULES, type ClassSettings } from "../../../shared/settings";
 import { Button, Callout, Card, CardHeader, Divider, Field, Input, Textarea, Toggle } from "../../components/ui";
 import { IconAlert, IconCheck, IconRefresh } from "../../components/Icons";
 
@@ -127,6 +127,36 @@ export function SettingsTab({ settings, send, connected }: Props) {
                 ))}
               </div>
             </Field>
+          </div>
+        </Card>
+
+        <Card className="p-5">
+          <CardHeader
+            title="자리·모둠"
+            description="모둠·자리 탭에서 자리를 뽑을 때 이 규칙을 씁니다. 서버가 이 규칙으로 배정합니다."
+          />
+          <div className="mt-4 grid gap-2 sm:grid-cols-2">
+            {SEAT_RULES.map((rule) => (
+              <button
+                key={rule.id}
+                type="button"
+                onClick={() => set("seatRule", rule.id)}
+                className={
+                  draft.seatRule === rule.id
+                    ? "rounded-xl bg-brand-600 px-3 py-2 text-left text-white ring-1 ring-brand-600"
+                    : "rounded-xl bg-slate-50 px-3 py-2 text-left ring-1 ring-slate-200 hover:bg-slate-100"
+                }
+              >
+                <p className="text-[12.5px] font-bold">{rule.label}</p>
+                <p
+                  className={
+                    draft.seatRule === rule.id ? "text-[11px] text-white/80" : "text-[11px] text-slate-400"
+                  }
+                >
+                  {rule.hint}
+                </p>
+              </button>
+            ))}
           </div>
         </Card>
 

@@ -48,7 +48,19 @@ export interface ClassSettings {
   timerMinutes: number;
   /** 효과음 기본 켜짐 */
   soundEnabled: boolean;
+  /** 자리 뽑기 규칙: 무작위 · 이름순 · 입장순 · 모둠별 */
+  seatRule: SeatRule;
 }
+
+/** 자리 뽑기에 쓰는 규칙. */
+export type SeatRule = "random" | "name" | "joined" | "team";
+
+export const SEAT_RULES: { id: SeatRule; label: string; hint: string }[] = [
+  { id: "random", label: "무작위", hint: "완전히 섞어서 뽑습니다." },
+  { id: "name", label: "이름순", hint: "가나다순으로 앞자리부터 차례로 앉힙니다." },
+  { id: "joined", label: "입장순", hint: "수업에 들어온 순서대로 앉힙니다." },
+  { id: "team", label: "모둠별", hint: "같은 모둠 학생끼리 옆자리에 모아 앉힙니다." },
+];
 
 export const DEFAULT_SETTINGS: ClassSettings = {
   className: "",
@@ -70,6 +82,7 @@ export const DEFAULT_SETTINGS: ClassSettings = {
   itemMaxHeld: 3,
   timerMinutes: 5,
   soundEnabled: true,
+  seatRule: "random",
 };
 
 function text(value: unknown, maxLength: number, fallback: string): string {
@@ -85,6 +98,10 @@ function num(value: unknown, min: number, max: number, fallback: number): number
 
 function flag(value: unknown, fallback: boolean): boolean {
   return typeof value === "boolean" ? value : fallback;
+}
+
+function seatRule(value: unknown, fallback: SeatRule): SeatRule {
+  return SEAT_RULES.some((rule) => rule.id === value) ? (value as SeatRule) : fallback;
 }
 
 /** 어떤 입력이 와도 안전한 설정으로 바꿉니다(부분 patch 허용). */
@@ -111,6 +128,7 @@ export function normalizeSettings(input: unknown): ClassSettings {
     itemMaxHeld: num(raw.itemMaxHeld, 1, 6, defaults.itemMaxHeld),
     timerMinutes: num(raw.timerMinutes, 1, 120, defaults.timerMinutes),
     soundEnabled: flag(raw.soundEnabled, defaults.soundEnabled),
+    seatRule: seatRule(raw.seatRule, defaults.seatRule),
   };
 }
 
@@ -162,6 +180,12 @@ export const SETTINGS_GROUPS: {
       { key: "showLeaderboard", label: "내 순위 표시" },
       { key: "soundEnabled", label: "효과음 기본 켜기" },
     ],
+  },
+  {
+    id: "seat",
+    title: "자리·모둠",
+    hint: "모둠·자리 탭의 자리 뽑기에 적용됩니다.",
+    items: [{ key: "seatRule", label: "자리 뽑기 규칙" }],
   },
   {
     id: "class",

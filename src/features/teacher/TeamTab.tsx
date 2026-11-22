@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import type { ClientMessage, PresenterPick, RosterState, StudentLive, TeamBoard } from "../../../shared/protocol";
 import { teamLabels, teamTone } from "../../../shared/roster";
+import { SEAT_RULES, type ClassSettings } from "../../../shared/settings";
 import {
   Avatar,
   Badge,
@@ -57,6 +58,7 @@ export function TeamTab({
   boards,
   presenter,
   roster,
+  settings,
   send,
   connected,
 }: {
@@ -64,6 +66,7 @@ export function TeamTab({
   boards: TeamBoard[];
   presenter: PresenterPick | null;
   roster: RosterState;
+  settings: ClassSettings;
   send: (message: ClientMessage) => void;
   connected: boolean;
 }) {
@@ -239,12 +242,12 @@ export function TeamTab({
                 onClick={() => send({ type: "seat_shuffle" })}
               >
                 <IconSparkles size={13} /> 자리 뽑기 ({Math.min(capacity, students.length)}명)
-              </Button>
-              <Button size="sm" variant="secondary" disabled={!connected} onClick={() => send({ type: "seat_clear" })}>
+              </Button>              <Button size="sm" variant="secondary" disabled={!connected} onClick={() => send({ type: "seat_clear" })}>
                 <IconRefresh size={12} /> 자리 비우기
               </Button>
               <span className="text-[10.5px] text-slate-400">
-                {students.length}명 · {capacity}자리
+                {students.length}명 · {capacity}자리 · 규칙{" "}
+                {SEAT_RULES.find((rule) => rule.id === settings.seatRule)?.label ?? "무작위"}
               </span>
             </div>
 

@@ -209,6 +209,7 @@ function Check() {
           boards={[{ team: "1모둠", posts: [{ id: "p1", team: "1모둠", author: "김하늘", text: "토의 내용", createdAt: now }] }]}
           presenter={null}
           roster={roster}
+          settings={DEFAULT_SETTINGS}
           send={noop}
           connected
         />
@@ -236,5 +237,6 @@ function Check() {
 }
 
 createRoot(document.getElementById("root")!).render(<Check />);
+
 
 
