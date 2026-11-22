@@ -99,6 +99,7 @@ export function GameTab({
   const [durationSec, setDurationSec] = useState(() => settings.quizSeconds || 0);
   const [error, setError] = useState<string | null>(null);
   const [projector, setProjector] = useState(false);
+  const [autoAdvance, setAutoAdvance] = useState(false);
   const [now, setNow] = useState(() => Date.now());
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -246,6 +247,22 @@ export function GameTab({
       durationSec: durationSec || undefined,
     });
   };
+
+  // 자동 넘기기: 선생님이 응답을 맡기면 잠시 뒤 다음 문제로 이동합니다.
+  const autoTimer = useRef<number | null>(null);
+  useEffect(() => {
+    if (!autoAdvance || !selected) return;
+    if (quiz?.status !== "closed") return;
+    if (questionIndex + 1 >= selected.questions.length) return;
+    if (autoTimer.current) window.clearTimeout(autoTimer.current);
+    autoTimer.current = window.setTimeout(() => {
+      setQuestionIndex((index) => Math.min(index + 1, (selected?.questions.length ?? 1) - 1));
+    }, 1800);
+    return () => {
+      if (autoTimer.current) window.clearTimeout(autoTimer.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoAdvance, quiz?.id, quiz?.status, questionIndex, selected?.id]);
 
   const answerLabel = (optionId: string) =>
     quiz?.options.find((option) => option.id === optionId)?.label ?? optionId;
@@ -818,6 +835,14 @@ export function GameTab({
                       응답 마감
                     </Button>
                   ) : null}
+                  <Button
+                    size="sm"
+                    variant={autoAdvance ? "subtle" : "ghost"}
+                    onClick={() => setAutoAdvance((value) => !value)}
+                    title="응답을 맡으면 잠시 뒤 다음 문제로 넘어갑니다"
+                  >
+                    {autoAdvance ? "자동 넘기기 켜짐" : "자동 넘기기"}
+                  </Button>
                 </div>
               </div>
             ) : null}

@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+﻿import { useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../lib/auth";
 import { Logo } from "../components/Logo";
@@ -205,7 +205,7 @@ export default function Landing() {
               로그인
             </Link>
                           <Link to={teacher ? "/app" : "/login"}>
-                <Button size="sm" className="bg-white text-ink-900 shadow-none hover:bg-slate-100">
+                <Button size="sm" variant="light" className="shadow-none">
                 {teacher ? "대시보드" : "선생님 입장"}
                 <IconArrowRight size={14} />
               </Button>
@@ -427,7 +427,7 @@ export default function Landing() {
             </p>
             <div className="mt-7 flex flex-wrap justify-center gap-3">
               <Link to={teacher ? "/app" : "/login"}>
-                <Button size="lg" className="bg-white text-brand-700 shadow-lg shadow-indigo-950/30 hover:bg-indigo-50">
+                <Button size="lg" variant="lightBrand" className="shadow-lg shadow-indigo-950/30">
                   {teacher ? "대시보드로 이동" : "선생님 입장"}
                   <IconArrowRight size={17} />
                 </Button>
@@ -463,3 +463,4 @@ export default function Landing() {
     </div>
   );
 }
+

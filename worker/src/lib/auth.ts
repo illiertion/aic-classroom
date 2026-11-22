@@ -56,10 +56,27 @@ export async function readSession(c: Context<AppEnv>): Promise<SessionPayload | 
 
 export async function requireTeacher(c: Context<AppEnv>): Promise<SessionPayload> {
   const session = await readSession(c);
-  // Old per-account sessions are not valid after the single-teacher migration.
-  if (!session || session.tid !== TEACHER_ID) throw unauthorized();
+  if (!session || !session.tid) throw unauthorized();
+  const exists = await c.env.DB.prepare("SELECT id FROM teachers WHERE id = ?")
+    .bind(session.tid)
+    .first<{ id: string }>();
+  if (!exists) throw unauthorized();
   c.set("teacher", session);
   return session;
+}
+
+/** 액세스 코드로 선생님 계정을 찾습니다(대소문자·공백 무시). */
+export async function findTeacherByCode(
+  env: Env,
+  code: string,
+): Promise<{ id: string; name: string; access_code: string } | null> {
+  const normalized = code.replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
+  if (normalized.length < 4) return null;
+  return env.DB.prepare(
+    "SELECT id, name, access_code FROM teachers WHERE UPPER(access_code) = ? LIMIT 1",
+  )
+    .bind(normalized)
+    .first<{ id: string; name: string; access_code: string }>();
 }
 
 /**

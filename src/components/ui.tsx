@@ -16,7 +16,15 @@ export function cx(...values: Array<string | false | null | undefined>): string 
 
 /* --------------------------------- button -------------------------------- */
 
-type ButtonVariant = "primary" | "secondary" | "ghost" | "danger" | "success" | "subtle";
+type ButtonVariant =
+  | "primary"
+  | "secondary"
+  | "ghost"
+  | "danger"
+  | "success"
+  | "subtle"
+  | "light"
+  | "lightBrand";
 type ButtonSize = "sm" | "md" | "lg";
 
 const BUTTON_VARIANTS: Record<ButtonVariant, string> = {
@@ -28,6 +36,9 @@ const BUTTON_VARIANTS: Record<ButtonVariant, string> = {
   danger: "bg-rose-600 text-white shadow-sm shadow-rose-600/20 hover:bg-rose-700",
   success: "bg-emerald-600 text-white shadow-sm shadow-emerald-600/20 hover:bg-emerald-700",
   subtle: "bg-brand-50 text-brand-700 hover:bg-brand-100",
+  // 흰 배경 위에 놓는 버튼. bg-white + text-white가 겹쳐 글자가 사라지는 문제를 막습니다.
+  light: "bg-white text-ink-900 shadow-sm hover:bg-slate-100",
+  lightBrand: "bg-white text-brand-700 shadow-sm hover:bg-brand-50",
 };
 
 const BUTTON_SIZES: Record<ButtonSize, string> = {

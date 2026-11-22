@@ -1,4 +1,4 @@
-/**
+﻿/**
  * 선생님이 수업마다 직접 조정하는 값들.
  *
  * 값은 수업(ClassroomHub Durable Object)의 `config` 테이블에 `settings` 키로 저장되고,
@@ -19,6 +19,8 @@ export interface ClassSettings {
   allowHandRaise: boolean;
   /** 학생이 보드에 카드를 붙일 수 있는 기본값 */
   allowStudentPosts: boolean;
+  /** 모둠별 토의 글쓰기 잠금 */
+  teamChatLocked: boolean;
   /** 학생 화면에 내 순위 표시 */
   showLeaderboard: boolean;
 
@@ -55,6 +57,7 @@ export const DEFAULT_SETTINGS: ClassSettings = {
   allowStudentShare: true,
   allowHandRaise: true,
   allowStudentPosts: true,
+  teamChatLocked: false,
   showLeaderboard: true,
   correctPoints: 100,
   wrongPoints: 0,
@@ -95,6 +98,7 @@ export function normalizeSettings(input: unknown): ClassSettings {
     allowStudentShare: flag(raw.allowStudentShare, defaults.allowStudentShare),
     allowHandRaise: flag(raw.allowHandRaise, defaults.allowHandRaise),
     allowStudentPosts: flag(raw.allowStudentPosts, defaults.allowStudentPosts),
+    teamChatLocked: flag(raw.teamChatLocked, defaults.teamChatLocked),
     showLeaderboard: flag(raw.showLeaderboard, defaults.showLeaderboard),
     correctPoints: num(raw.correctPoints, 0, 1000, defaults.correctPoints),
     wrongPoints: num(raw.wrongPoints, -500, 1000, defaults.wrongPoints),
@@ -154,6 +158,7 @@ export const SETTINGS_GROUPS: {
       { key: "allowStudentShare", label: "화면 공유 허용" },
       { key: "allowHandRaise", label: "손들기 허용" },
       { key: "allowStudentPosts", label: "보드 카드 붙이기 허용" },
+      { key: "teamChatLocked", label: "모둠 대화 잠그기", hint: "잠그면 학생이 모둠 토의에 글을 쓰지 못합니다." },
       { key: "showLeaderboard", label: "내 순위 표시" },
       { key: "soundEnabled", label: "효과음 기본 켜기" },
     ],
@@ -168,3 +173,4 @@ export const SETTINGS_GROUPS: {
     ],
   },
 ];
+

@@ -138,6 +138,27 @@ export default function Dashboard() {
           >
             이름 바꾸기
           </button>
+          {teacher.accessCode ? (
+            <div className="mt-2 inline-flex flex-wrap items-center gap-2 rounded-xl bg-slate-50 px-3 py-1.5 ring-1 ring-slate-200">
+              <span className="text-[11px] font-semibold text-slate-500">내 액세스 코드</span>
+              <span className="font-mono text-[13px] font-bold tracking-[0.16em] text-slate-900">
+                {teacher.accessCode}
+              </span>
+              <CopyButton value={teacher.accessCode} label="복사" />
+              <button
+                type="button"
+                onClick={() => {
+                  void api.auth
+                    .rotateCode()
+                    .then((result) => setTeacher(result.teacher))
+                    .catch(() => undefined);
+                }}
+                className="text-[11px] font-semibold text-brand-600 hover:text-brand-700"
+              >
+                재발급
+              </button>
+            </div>
+          ) : null}
           <p className="mt-1.5 text-[13px] text-slate-500">
             수업을 열고 참가 코드를 공유하세요. 학생은 설치 없이 이름만으로 참여합니다.
           </p>

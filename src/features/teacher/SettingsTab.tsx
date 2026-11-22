@@ -149,6 +149,7 @@ export function SettingsTab({ settings, send, connected }: Props) {
                 ["allowStudentShare", "화면 공유 허용", "학생이 자기 화면을 보여 줄 수 있습니다."],
                 ["allowHandRaise", "손들기 허용", "학생 화면의 손들기 버튼을 보여 줍니다."],
                 ["allowStudentPosts", "보드 카드 붙이기 허용", "활동 보드에 학생이 직접 카드를 붙입니다."],
+                ["teamChatLocked", "모둠 대화 잠그기", "잠그면 학생이 모둠 토의에 글을 쓰지 못합니다."],
                 ["showLeaderboard", "내 순위 표시", "학생 화면에 내 점수·순위를 보여 줍니다."],
                 ["soundEnabled", "효과음 기본 켜기", "학생 화면 입장 시 효과음 상태입니다."],
               ] as [keyof ClassSettings, string, string][]

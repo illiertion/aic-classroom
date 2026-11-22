@@ -1165,13 +1165,17 @@ export default function StudentRoom() {
                   value={teamText}
                   onChange={(event) => setTeamText(event.target.value)}
                   maxLength={400}
-                  disabled={ended}
-                  placeholder="우리 모둠에게만 보이는 의견"
+                  disabled={ended || settings.teamChatLocked}
+                  placeholder={
+                    settings.teamChatLocked
+                      ? "선생님이 모둠 대화를 잠갔습니다."
+                      : "우리 모둠에게만 보이는 의견"
+                  }
                   className="min-h-16 text-[12.5px]"
                 />
                 <Button
                   size="sm"
-                  disabled={ended || !teamText.trim()}
+                  disabled={ended || settings.teamChatLocked || !teamText.trim()}
                   onClick={() => {
                     socketSend({ type: "team_post", text: teamText.trim() });
                     setTeamText("");

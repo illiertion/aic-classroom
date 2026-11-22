@@ -1339,6 +1339,14 @@ export class ClassroomHub extends DurableObject<Env> {
           this.send(ws, { type: "error", message: "모둠이 아직 배정되지 않았습니다." });
           return;
         }
+        if (this.settings().teamChatLocked) {
+          this.send(ws, {
+            type: "notice",
+            text: "선생님이 모둠 대화를 잠갔습니다.",
+            at: Date.now(),
+          });
+          return;
+        }
         this.addTeamPost(row.team, name, data.text);
         return;
       }

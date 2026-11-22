@@ -65,6 +65,21 @@ export const api = {
     me: () => request<{ teacher: TeacherProfile }>("/auth/me"),
     login: (password: string) =>
       request<{ teacher: TeacherProfile }>("/auth/login", { method: "POST", ...json({ password }) }),
+    loginWithCode: (name: string, accessCode: string) =>
+      request<{ teacher: TeacherProfile }>("/auth/login", {
+        method: "POST",
+        ...json({ name, accessCode }),
+      }),
+    register: (name: string) =>
+      request<{ teacher: TeacherProfile; accessCode: string }>("/auth/register", {
+        method: "POST",
+        ...json({ name }),
+      }),
+    rotateCode: () =>
+      request<{ teacher: TeacherProfile; accessCode: string }>("/auth/rotate-code", {
+        method: "POST",
+        ...json({}),
+      }),
     logout: () => request<{ ok: true }>("/auth/logout", { method: "POST", ...json({}) }),
     updateProfile: (name: string) =>
       request<{ teacher: TeacherProfile }>("/auth/profile", { method: "PATCH", ...json({ name }) }),

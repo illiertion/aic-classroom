@@ -84,6 +84,16 @@ const TABS = [
   },
   {
     icon: IconSparkles,
+    name: "과목 도구",
+    tone: "brand" as const,
+    points: [
+      "수업 과목(수학·영어·국어·과학/사회)에 맞는 문제 묶음을 바로 냅니다",
+      "덧셈·뺄셈·구구단, 단어 쓰기·뜻 연결, 받아쓰기·낱말 뜻, OX 확인",
+      "선생님이 응답을 맡으면 다음 문제로 자동으로 넘어갑니다",
+    ],
+  },
+  {
+    icon: IconSparkles,
     name: "게임·미니게임",
     tone: "warn" as const,
     points: [
@@ -270,7 +280,7 @@ export default function Guide() {
 
       <div className="mt-8 flex items-center justify-between">
         <h2 className="text-[15px] font-bold text-slate-900">선생님 콘솔 탭</h2>
-        <span className="text-[11.5px] text-slate-400">11개 탭</span>
+        <span className="text-[11.5px] text-slate-400">12개 탭</span>
       </div>
       <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {TABS.map((tab) => (
@@ -369,5 +379,6 @@ export default function Guide() {
     </AppShell>
   );
 }
+
 
 

@@ -65,6 +65,7 @@ import { BoardTab } from "../features/teacher/BoardTab";
 import { ScreenShareTab } from "../features/teacher/ScreenShareTab";
 import { PresentTab } from "../features/teacher/PresentTab";
 import { SettingsTab } from "../features/teacher/SettingsTab";
+import { SubjectTab } from "../features/teacher/SubjectTab";
 import { TeamTab } from "../features/teacher/TeamTab";
 import { ToolboxTab } from "../features/teacher/ToolboxTab";
 import { EventsTab } from "../features/teacher/EventsTab";
@@ -84,6 +85,7 @@ import {
 const TABS = [
   { id: "monitor", label: "수업 현황" },
   { id: "tools", label: "학습지·문제" },
+  { id: "subject", label: "과목 도구" },
   { id: "game", label: "게임·미니게임" },
   { id: "toolbox", label: "수업 도구" },
   { id: "teams", label: "모둠·자리" },
@@ -671,6 +673,16 @@ export default function ClassroomConsole() {
             send={socket.send}
             connected={socket.status === "open" && classroom.status === "live"}
             studentCount={students.length}
+          />
+        ) : null}
+        {tab === "subject" ? (
+          <SubjectTab
+            subject={classroom.subject}
+            quiz={quiz}
+            students={students}
+            settings={settings}
+            send={socket.send}
+            connected={socket.status === "open" && classroom.status === "live"}
           />
         ) : null}
         {tab === "game" ? (

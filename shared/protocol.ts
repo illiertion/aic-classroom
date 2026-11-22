@@ -779,6 +779,8 @@ export interface TeacherProfile {
   id: string;
   name: string;
   email: string;
+  /** 이름 + 액세스 코드로 로그인하는 계정에만 있습니다(원래 계정은 비밀번호 사용). */
+  accessCode?: string | null;
 }
 
 export interface ClassroomSettings {
