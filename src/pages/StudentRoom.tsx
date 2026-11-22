@@ -18,7 +18,6 @@ import type {
   GameState,
   LiveBoard,
   LiveQuiz,
-  MiniGameState,
   PresenterPick,
   RosterState,
   ServerMessage,
@@ -34,7 +33,6 @@ import { teamLabels, teamTone } from "../../shared/roster";
 import { LogoMark } from "../components/Logo";
 import { LiveVideo } from "../components/LiveVideo";
 import { PdfAnnotator } from "../components/PdfAnnotator";
-import { MiniGameCard } from "../components/MiniGameCard";
 import {
   Badge,
   Button,
@@ -431,7 +429,6 @@ export default function StudentRoom() {
   const [timer, setTimer] = useState<ClassTimer | null>(null);
   const [teamBoard, setTeamBoard] = useState<TeamBoard | null>(null);
   const [presenter, setPresenter] = useState<PresenterPick | null>(null);
-  const [minigame, setMinigame] = useState<MiniGameState | null>(null);
   const [tools, setTools] = useState<ClassToolsState>({ scores: {}, checkinOpen: false, attendance: [] });
   const [roster, setRoster] = useState<RosterState>({
     teamCount: 4,
@@ -449,7 +446,6 @@ export default function StudentRoom() {
   const [worksheetLocked, setWorksheetLocked] = useState(false);
   const [fullscreenRequested, setFullscreenRequested] = useState(false);
   const [teamText, setTeamText] = useState("");
-  const [foundWord, setFoundWord] = useState("");
   const [stageHidden, setStageHidden] = useState<string | null>(null);
   const [handRaised, setHandRaised] = useState(false);
   const [now, setNow] = useState(() => Date.now());
@@ -516,7 +512,6 @@ export default function StudentRoom() {
       setGame(snapshot.game);
       setTeamBoard(snapshot.teamBoard);
       setPresenter(snapshot.presenter);
-      setMinigame(snapshot.minigame);
       setTools(snapshot.tools ?? { scores: {}, checkinOpen: false, attendance: [] });
       if (snapshot.roster) setRoster(snapshot.roster);
       if (snapshot.settings) {
@@ -609,8 +604,6 @@ export default function StudentRoom() {
         case "presenter":
           setPresenter(message.presenter);
           break;
-        case "minigame":
-          setMinigame(message.game);
           break;
         case "tools":
           setTools(message.tools);
@@ -940,15 +933,6 @@ export default function StudentRoom() {
     playCue(correct ? "correct" : "wrong");
   }, [myAnswer, quiz]);
 
-  const cueJamo = useRef("");
-  useEffect(() => {
-    if (minigame?.kind !== "jamo") return;
-    const key = `${minigame.index}:${minigame.solved}`;
-    if (cueJamo.current === key) return;
-    cueJamo.current = key;
-    if (minigame.solved) playCue("win");
-  }, [minigame]);
-
   // 보기 순서는 문제마다 한 번만 섞습니다(다시 그려도 순서가 바뀌지 않도록).
   const connectRights = useMemo(() => {
     const list = quiz?.mode === "connect" ? [...quiz.rights] : [];
@@ -1175,24 +1159,6 @@ export default function StudentRoom() {
           </div>
         ) : null}
 
-        {minigame ? (
-          <MiniGameCard
-            game={minigame}
-            me={stored.participantId}
-            now={now}
-            foundWord={foundWord}
-            onFoundWord={setFoundWord}
-            onFind={(word) => {
-              socketSend({ type: "word_found", word });
-              setFoundWord("");
-            }}
-            onPass={() => socketSend({ type: "bomb_pass" })}
-            onFlip={(cardId) => socketSend({ type: "memory_flip", cardId })}
-            onTap={(cell) => socketSend({ type: "speedtap_tap", cell })}
-            onJamo={(text) => socketSend({ type: "jamo_answer", text })}
-            ended={ended}
-          />
-        ) : null}
 
         {tools.checkinOpen || Object.keys(tools.scores).length > 0 ? (
           <Card className="overflow-hidden">

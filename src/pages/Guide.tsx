@@ -84,22 +84,11 @@ const TABS = [
   },
   {
     icon: IconSparkles,
-    name: "과목 도구",
-    tone: "brand" as const,
-    points: [
-      "수업 과목(수학·영어·국어·과학/사회)에 맞는 문제 묶음을 바로 냅니다",
-      "덧셈·뺄셈·구구단, 단어 쓰기·뜻 연결, 받아쓰기·낱말 뜻, OX 확인",
-      "선생님이 응답을 맡으면 다음 문제로 자동으로 넘어갑니다",
-    ],
-  },
-  {
-    icon: IconSparkles,
-    name: "게임·미니게임",
+    name: "게임",
     tone: "warn" as const,
     points: [
-      "게임 고르기: 가로세로 단어찾기·흩어진 단어·카드 짝·단어/문장 순서·빈칸·운석·OX + 일반전·아이템전",
+      "게임 고르기: 흩어진 단어·단어/문장 순서·빈칸·운석·OX + 일반전·아이템전",
       "게임마다 라운드 수·제한시간을 직접 정하고, 문제 편집은 접어 두고 필요할 때만 엽니다",
-      "한 탭에서 ‘문제 게임’과 ‘미니게임’을 전환해 바로 시작",
       "일반전·스피드전·골든벨·팀전·아이템전 (점수는 수업 설정에서 바꿉니다)",
       "대기 화면: 방번호와 접속 학생 목록을 크게 띄워 함께 시작",
       "문제 유형: 3~6지선다·OX·주관식 단어·뜻 연결(짝 맞히기)을 직접 편집",
@@ -221,7 +210,7 @@ const STUDENT = [
   { icon: IconClock, title: "타이머", body: "수업 남은 시간이 상단에 항상 표시됩니다." },
   { icon: IconUsers, title: "모둠 토의", body: "내 모둠 칸에서만 글을 쓰고 볼 수 있습니다. 다른 모둠 글은 보이지 않습니다." },
   { icon: IconUsers, title: "모둠·자리 선택", body: "선생님이 열어 두면 내 모둠과 빈자리를 직접 고를 수 있습니다." },
-  { icon: IconTrophy, title: "발표자·미니게임", body: "발표자로 뽑히면 화면에 표시되고, 폭탄 돌리기·낱말 찾기·사다리·반응 속도·초성 퀴즈에 참여합니다." },
+  { icon: IconTrophy, title: "발표자", body: "발표자로 뽑히면 화면에 표시됩니다." },
   { icon: IconCheck, title: "출석·모둠 점수", body: "출석 시간이 되면 ‘출석하기’ 버튼이 뜨고, 우리 모둠 점수가 함께 보입니다. 아이템전에서는 아이템도 쓸 수 있습니다." },
 ];
 
@@ -284,7 +273,7 @@ export default function Guide() {
 
       <div className="mt-8 flex items-center justify-between">
         <h2 className="text-[15px] font-bold text-slate-900">선생님 콘솔 탭</h2>
-        <span className="text-[11.5px] text-slate-400">12개 탭</span>
+        <span className="text-[11.5px] text-slate-400">6개 탭</span>
       </div>
       <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {TABS.map((tab) => (
@@ -383,6 +372,8 @@ export default function Guide() {
     </AppShell>
   );
 }
+
+
 
 
 

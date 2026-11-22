@@ -367,6 +367,24 @@ export function PresentTab({
               <Button variant="ghost" onClick={() => void toggleConsoleFullscreen()}>
                 <IconMaximize size={14} /> 교사 화면 전체화면
               </Button>
+              {kind === "url" && url.trim() ? (
+                <Button
+                  variant="subtle"
+                  disabled={!connected}
+                  onClick={() => {
+                    push({
+                      kind: "url",
+                      title: title.trim() || "선생님이 보낸 링크",
+                      url: url.trim(),
+                      requireFullscreen: false,
+                    });
+                    send({ type: "nudge_all", text: `선생님이 링크를 보냈습니다: ${title.trim() || url.trim()}` });
+                    announce("링크를 학생 화면에 띄우고 알림도 보냈습니다.");
+                  }}
+                >
+                  <IconExternal size={14} /> 이 링크 보내기 (알림 포함)
+                </Button>
+              ) : null}
             </div>
             {popupBlocked ? (
               <p className="text-[11px] font-medium text-rose-600">

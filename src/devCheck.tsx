@@ -1,39 +1,14 @@
 ﻿// Temporary local render check for the new games/tools UI. Deleted after use.
 import { createRoot } from "react-dom/client";
 import "./index.css";
-import { LadderBoard } from "./components/LadderBoard";
-import { MiniGameCard } from "./components/MiniGameCard";
-import { MiniGameTab } from "./features/teacher/MiniGameTab";
-import { TeamTab } from "./features/teacher/TeamTab";
 import { DEFAULT_SETTINGS } from "../shared/settings";
-import { GameTab } from "./features/teacher/GameTab";
+import type { GameState, RosterState, StudentLive } from "../shared/protocol";
 import { ToolboxTab } from "./features/teacher/ToolboxTab";
-import type { GameState, LadderState, RosterState, StudentLive } from "../shared/protocol";
+import { TeamTab } from "./features/teacher/TeamTab";
+import { GameTab } from "./features/teacher/GameTab";
 
 const now = Date.now();
 
-const ladder: LadderState = {
-  kind: "ladder",
-  at: now,
-  names: ["김하늘", "이바다", "박별", "최달"],
-  prizes: ["1등", "2등", "3등", "참가"],
-  rows: 8,
-  rungs: [
-    { row: 1, col: 0 },
-    { row: 2, col: 2 },
-    { row: 4, col: 1 },
-    { row: 5, col: 0 },
-    { row: 6, col: 2 },
-    { row: 7, col: 1 },
-  ],
-  winners: [
-    { name: "김하늘", prize: "2등", start: 0, end: 1 },
-    { name: "이바다", prize: "참가", start: 1, end: 3 },
-    { name: "박별", prize: "1등", start: 2, end: 0 },
-    { name: "최달", prize: "3등", start: 3, end: 2 },
-  ],
-  revealed: true,
-};
 
 const students: StudentLive[] = [
   {
@@ -70,41 +45,8 @@ const students: StudentLive[] = [
   },
 ];
 
-const jamo = {
-  kind: "jamo" as const,
-  index: 1,
-  total: 3,
-  prompt: "ㅅㄱ (2글자)",
-  answer: null,
-  solved: false,
-  solvedBy: null,
-  attempts: [{ name: "김하늘", text: "사과", correct: true, at: now }],
-  scores: [{ name: "김하늘", points: 10 }],
-  startedAt: now,
-};
 
-const speedtap = {
-  kind: "speedtap" as const,
-  round: 2,
-  size: 4,
-  target: 5,
-  startsAt: now - 1000,
-  endsAt: now + 60_000,
-  hits: [{ participantId: "prt_a", name: "김하늘", ms: 312, points: 10 }],
-  totals: [{ participantId: "prt_a", name: "김하늘", points: 10, bestMs: 312 }],
-};
 
-const memory = {
-  kind: "memory" as const,
-  cards: [
-    { id: "c1", label: "사과", pairId: "p1", state: "open" as const },
-    { id: "c2", label: "포도", pairId: "p2", state: "hidden" as const },
-    { id: "c3", label: "사과", pairId: "p1", state: "matched" as const },
-    { id: "c4", label: "포도", pairId: "p2", state: "hidden" as const },
-  ],
-  moves: 3,
-  matched: 1,
-};
 
 const roster: RosterState = {
   teamCount: 6,
@@ -136,60 +78,10 @@ const gameState: GameState = {
 };
 
 const noop = () => undefined;
-const ladderGame = ladder;
-const speedtapGame = speedtap;
 function Check() {
   return (
     <div className="mx-auto max-w-3xl space-y-6 bg-[#f4f6fb] p-6">
       <h1 className="text-[20px] font-extrabold text-slate-900">AIC 새 게임·도구 렌더링 점검</h1>
-      <section id="ladder">
-        <LadderBoard state={ladder} reveal />
-      </section>
-      <section id="jamo">
-        <MiniGameCard
-          game={jamo}
-          me="prt_a"
-          now={now}
-          foundWord=""
-          onFoundWord={noop}
-          onFind={noop}
-          onPass={noop}
-          onFlip={noop}
-          onTap={noop}
-          onJamo={noop}
-          ended={false}
-        />
-      </section>
-      <section id="speedtap">
-        <MiniGameCard
-          game={speedtap}
-          me="prt_a"
-          now={now}
-          foundWord=""
-          onFoundWord={noop}
-          onFind={noop}
-          onPass={noop}
-          onFlip={noop}
-          onTap={noop}
-          onJamo={noop}
-          ended={false}
-        />
-      </section>
-      <section id="memory">
-        <MiniGameCard
-          game={memory}
-          me="prt_a"
-          now={now}
-          foundWord=""
-          onFoundWord={noop}
-          onFind={noop}
-          onPass={noop}
-          onFlip={noop}
-          onTap={noop}
-          onJamo={noop}
-          ended={false}
-        />
-      </section>
       <section id="toolbox">
         <ToolboxTab
           tools={{
@@ -226,17 +118,14 @@ function Check() {
           settings={DEFAULT_SETTINGS}
         />
       </section>
-      <section id="minigametab">
-        <MiniGameTab game={ladderGame} students={students} send={noop} connected />
-      </section>
-      <section id="minigametab-speed">
-        <MiniGameTab game={speedtapGame} students={students} send={noop} connected />
-      </section>
     </div>
   );
 }
 
 createRoot(document.getElementById("root")!).render(<Check />);
+
+
+
 
 
 

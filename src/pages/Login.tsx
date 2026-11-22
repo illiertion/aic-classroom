@@ -1,21 +1,18 @@
-import { useEffect, useState, type FormEvent } from "react";
+﻿import { useEffect, useState, type FormEvent } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { api, ApiRequestError } from "../lib/api";
 import { useAuth } from "../lib/auth";
 import { AuthLayout } from "../components/AuthLayout";
-import { Button, Callout, CopyButton, Field, Input, cx } from "../components/ui";
+import { Button, Callout, CopyButton, Field, Input } from "../components/ui";
 import { IconAlert, IconArrowRight, IconCheck, IconLock, IconUser } from "../components/Icons";
 
-type Mode = "code" | "password";
 
 export default function Login() {
   const { teacher, refresh } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const [mode, setMode] = useState<Mode>("code");
   const [name, setName] = useState("");
   const [code, setCode] = useState("");
-  const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [freshCode, setFreshCode] = useState<string | null>(null);
@@ -42,12 +39,6 @@ export default function Login() {
 
   const submit = (event: FormEvent) => {
     event.preventDefault();
-    if (mode === "password") {
-      void run(async () => {
-        await api.auth.login(password);
-      });
-      return;
-    }
     void run(async () => {
       await api.auth.loginWithCode(name.trim(), code.trim());
     });
@@ -98,7 +89,6 @@ export default function Login() {
           size="lg"
           className="mt-4 w-full"
           onClick={() => {
-            setMode("code");
             setCode(freshCode);
             setFreshCode(null);
             void refresh().then(() => navigate(from, { replace: true }));
@@ -113,7 +103,7 @@ export default function Login() {
   return (
     <AuthLayout
       title="선생님 입장"
-      subtitle="이름과 액세스 코드로 들어오면 내 수업만 보입니다. 학교 공용 비밀번호도 그대로 쓸 수 있습니다."
+      subtitle="이름과 액세스 코드만으로 들어옵니다. 비밀번호는 없습니다. 내 수업만 보입니다."
       footer={
         <span className="inline-flex items-start gap-1.5">
           <IconLock size={13} className="mt-0.5 shrink-0" />
@@ -121,30 +111,7 @@ export default function Login() {
         </span>
       }
     >
-      <div className="mb-4 flex rounded-xl bg-slate-100 p-1">
-        {(
-          [
-            ["code", "이름 + 액세스 코드"],
-            ["password", "비밀번호"],
-          ] as [Mode, string][]
-        ).map(([id, label]) => (
-          <button
-            key={id}
-            type="button"
-            onClick={() => {
-              setMode(id);
-              setError(null);
-            }}
-            className={cx(
-              "flex-1 rounded-lg px-3 py-2 text-[12.5px] font-bold transition",
-              mode === id ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-800",
-            )}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
-
+    <>
       <form onSubmit={submit} className="space-y-4">
         {error ? (
           <Callout tone="danger" icon={<IconAlert size={16} />}>
@@ -152,69 +119,40 @@ export default function Login() {
           </Callout>
         ) : null}
 
-        {mode === "code" ? (
-          <>
-            <Field label="선생님 이름" htmlFor="teacher-name" hint="학생 화면에 표시되는 이름입니다.">
-              <Input
-                id="teacher-name"
-                value={name}
-                onChange={(event) => setName(event.target.value)}
-                placeholder="예: 김선생"
-                maxLength={40}
-                autoFocus
-              />
-            </Field>
-            <Field label="액세스 코드" htmlFor="access-code" hint="처음 만들 때 받은 6자리 코드입니다.">
-              <Input
-                id="access-code"
-                value={code}
-                onChange={(event) => setCode(event.target.value.toUpperCase())}
-                placeholder="ABC123"
-                maxLength={12}
-                className="font-mono tracking-[0.18em]"
-              />
-            </Field>
-            <Button type="submit" size="lg" loading={loading} className="w-full">
-              내 수업 열기
-              <IconArrowRight size={16} />
-            </Button>
-            <Button
-              type="button"
-              size="md"
-              variant="secondary"
-              className="w-full"
-              disabled={loading || !name.trim()}
-              onClick={createAccount}
-            >
-              <IconUser size={15} /> 이 이름으로 새 계정 만들기
-            </Button>
-          </>
-        ) : (
-          <>
-            <Field
-              label="선생님 비밀번호"
-              htmlFor="password"
-              hint="학교에서 정한 공용 비밀번호입니다. 학생은 이 화면을 사용하지 않습니다."
-            >
-              <Input
-                id="password"
-                type="password"
-                autoComplete="current-password"
-                required
-                minLength={8}
-                maxLength={200}
-                autoFocus
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-                placeholder="비밀번호"
-              />
-            </Field>
-            <Button type="submit" size="lg" loading={loading} className="w-full">
-              수업 열기
-              <IconArrowRight size={16} />
-            </Button>
-          </>
-        )}
+        <Field label="선생님 이름" htmlFor="teacher-name" hint="학생 화면에 표시되는 이름입니다.">
+          <Input
+            id="teacher-name"
+            value={name}
+            onChange={(event) => setName(event.target.value)}
+            placeholder="예: 김선생"
+            maxLength={40}
+            autoFocus
+          />
+        </Field>
+        <Field label="액세스 코드" htmlFor="access-code" hint="처음 만들 때 받은 6자리 코드입니다.">
+          <Input
+            id="access-code"
+            value={code}
+            onChange={(event) => setCode(event.target.value.toUpperCase())}
+            placeholder="ABC123"
+            maxLength={12}
+            className="font-mono tracking-[0.18em]"
+          />
+        </Field>
+        <Button type="submit" size="lg" loading={loading} className="w-full">
+          내 수업 열기
+          <IconArrowRight size={16} />
+        </Button>
+        <Button
+          type="button"
+          size="md"
+          variant="secondary"
+          className="w-full"
+          disabled={loading || !name.trim()}
+          onClick={createAccount}
+        >
+          <IconUser size={15} /> 이 이름으로 새 계정 만들기
+        </Button>
       </form>
 
       <div className="mt-6 rounded-xl border border-slate-200 bg-white/70 p-4 text-[12px] leading-relaxed text-slate-500">
@@ -224,6 +162,10 @@ export default function Login() {
       <Link to="/" className="mt-5 inline-block text-[12.5px] font-medium text-slate-500 hover:text-slate-900">
         ← 처음으로
       </Link>
+    </>
     </AuthLayout>
   );
 }
+
+
+

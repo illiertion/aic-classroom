@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+﻿import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { api } from "../lib/api";
 import { useAuth } from "../lib/auth";
@@ -15,7 +15,6 @@ import type {
   InputPreview,
   LiveBoard,
   LiveQuiz,
-  MiniGameState,
   PresenterPick,
   QuizResults,
   ServerMessage,
@@ -59,13 +58,12 @@ import {
 import { formatDate } from "../lib/format";
 import { MonitorTab } from "../features/teacher/MonitorTab";
 import { ToolsTab } from "../features/teacher/ToolsTab";
-import { GamesHubTab } from "../features/teacher/GamesHubTab";
+import { GameTab } from "../features/teacher/GameTab";
 import { PadletTab } from "../features/teacher/PadletTab";
 import { BoardTab } from "../features/teacher/BoardTab";
 import { ScreenShareTab } from "../features/teacher/ScreenShareTab";
 import { PresentTab } from "../features/teacher/PresentTab";
 import { SettingsTab } from "../features/teacher/SettingsTab";
-import { SubjectTab } from "../features/teacher/SubjectTab";
 import { TeamTab } from "../features/teacher/TeamTab";
 import { ToolboxTab } from "../features/teacher/ToolboxTab";
 import { EventsTab } from "../features/teacher/EventsTab";
@@ -83,18 +81,12 @@ import {
 } from "../lib/joinBase";
 
 const TABS = [
-  { id: "monitor", label: "수업 현황" },
-  { id: "tools", label: "학습지·문제" },
-  { id: "subject", label: "과목 도구" },
-  { id: "game", label: "게임·미니게임" },
-  { id: "toolbox", label: "수업 도구" },
-  { id: "teams", label: "모둠·자리" },
-  { id: "present", label: "띄우기·타이머" },
-  { id: "board", label: "활동 보드" },
-  { id: "padlet", label: "패들렛" },
-  { id: "share", label: "화면 공유" },
-  { id: "settings", label: "수업 설정" },
-  { id: "events", label: "기록" },
+  { id: "monitor", label: "현황" },
+  { id: "game", label: "게임" },
+  { id: "tools", label: "학습지" },
+  { id: "activity", label: "활동·띄우기" },
+  { id: "teams", label: "모둠·도구" },
+  { id: "settings", label: "설정·기록" },
 ];
 
 const EMPTY_GAME: GameState = {
@@ -127,9 +119,7 @@ export default function ClassroomConsole() {
   const { teacher } = useAuth();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const requestedTab = searchParams.get("tab") ?? "monitor";
-  // 이전 링크(?tab=minigames)도 게임 탭으로 열리게 합니다.
-  const tab = requestedTab === "minigames" ? "game" : requestedTab;
+  const tab = searchParams.get("tab") ?? "monitor";
 
   const [classroom, setClassroom] = useState<ClassroomSummary | null>(null);
   const [students, setStudents] = useState<StudentLive[]>([]);
@@ -144,7 +134,6 @@ export default function ClassroomConsole() {
   const [game, setGame] = useState<GameState>(EMPTY_GAME);
   const [teamBoards, setTeamBoards] = useState<TeamBoard[]>([]);
   const [presenter, setPresenter] = useState<PresenterPick | null>(null);
-  const [minigame, setMinigame] = useState<MiniGameState | null>(null);
   const [tools, setTools] = useState<ClassToolsState>(EMPTY_TOOLS);
   const [roster, setRoster] = useState<RosterState>(EMPTY_ROSTER);
   const [settings, setSettings] = useState<ClassSettings>(DEFAULT_SETTINGS);
@@ -194,7 +183,6 @@ export default function ClassroomConsole() {
     setGame(snapshot.game);
     setTeamBoards(snapshot.teamBoards);
     setPresenter(snapshot.presenter);
-    setMinigame(snapshot.minigame);
     setTools(snapshot.tools ?? EMPTY_TOOLS);
     setRoster(snapshot.roster ?? EMPTY_ROSTER);
     setSettings(snapshot.settings ?? DEFAULT_SETTINGS);
@@ -313,8 +301,6 @@ export default function ClassroomConsole() {
         case "presenter":
           setPresenter(message.presenter);
           return;
-        case "minigame":
-          setMinigame(message.game);
           return;
         case "tools":
           setTools(message.tools);
@@ -614,17 +600,11 @@ export default function ClassroomConsole() {
             count:
               item.id === "monitor"
                 ? liveStudents.length
-                : item.id === "events"
-                  ? events.length
-                  : item.id === "board" && board
-                    ? board.cards.length
-                    : item.id === "present"
-                      ? students.filter((student) => student.handRaised && student.online).length
-                      : item.id === "teams"
-                        ? teamBoards.reduce((sum, board) => sum + board.posts.length, 0)
-                        : item.id === "toolbox"
-                          ? tools.attendance.length
-                          : undefined,
+                : item.id === "activity" && board
+                  ? board.cards.length
+                  : item.id === "teams"
+                    ? teamBoards.reduce((sum, board) => sum + board.posts.length, 0)
+                    : undefined,
           }))}
           value={tab}
           onChange={(next) => setSearchParams({ tab: next }, { replace: true })}
@@ -641,18 +621,55 @@ export default function ClassroomConsole() {
       </div>
 
       <div className="mt-4">
-        {tab === "present" ? (
-          <PresentTab
-            stage={stage}
-            timer={timer}
-            students={students}
-            board={board}
-            send={socket.send}
-            connected={socket.status === "open" && classroom.status === "live"}
-            settings={settings}
+        {tab === "game" ? (
+          <GameTab
             quiz={quiz}
             results={quizResults}
+            game={game}
+            send={socket.send}
+            connected={socket.status === "open" && classroom.status === "live"}
+            studentCount={students.length}
+            joinCode={classroom.joinCode}
+            settings={settings}
           />
+        ) : null}
+        {tab === "activity" ? (
+          <div className="space-y-6">
+            <PresentTab
+              stage={stage}
+              timer={timer}
+              students={students}
+              board={board}
+              send={socket.send}
+              connected={socket.status === "open" && classroom.status === "live"}
+              settings={settings}
+              quiz={quiz}
+              results={quizResults}
+            />
+            <BoardTab board={board} send={socket.send} connected={socket.status === "open" && classroom.status === "live"} />
+            <PadletTab send={socket.send} connected={socket.status === "open" && classroom.status === "live"} />
+            <ScreenShareTab students={students} share={screenShare} />
+          </div>
+        ) : null}
+        {tab === "teams" ? (
+          <div className="space-y-6">
+            <TeamTab
+              students={students}
+              boards={teamBoards}
+              presenter={presenter}
+              roster={roster}
+              settings={settings}
+              send={socket.send}
+              connected={socket.status === "open" && classroom.status === "live"}
+            />
+            <ToolboxTab
+              tools={tools}
+              students={students}
+              roster={roster}
+              send={socket.send}
+              connected={socket.status === "open" && classroom.status === "live"}
+            />
+          </div>
         ) : null}
         {tab === "monitor" ? (
           <MonitorTab
@@ -677,23 +694,11 @@ export default function ClassroomConsole() {
             studentCount={students.length}
           />
         ) : null}
-        {tab === "subject" ? (
-          <SubjectTab
-            subject={classroom.subject}
-            quiz={quiz}
-            students={students}
-            settings={settings}
-            send={socket.send}
-            connected={socket.status === "open" && classroom.status === "live"}
-          />
-        ) : null}
         {tab === "game" ? (
-          <GamesHubTab
+          <GameTab
             quiz={quiz}
             results={quizResults}
             game={game}
-            minigame={minigame}
-            students={students}
             send={socket.send}
             connected={socket.status === "open" && classroom.status === "live"}
             studentCount={students.length}
@@ -701,47 +706,40 @@ export default function ClassroomConsole() {
             settings={settings}
           />
         ) : null}
-        {tab === "toolbox" ? (
-          <ToolboxTab
-            tools={tools}
-            students={students}
-            roster={roster}
-            send={socket.send}
-            connected={socket.status === "open" && classroom.status === "live"}
-          />
-        ) : null}
         {tab === "teams" ? (
-          <TeamTab
-            students={students}
-            boards={teamBoards}
-            presenter={presenter}
-            roster={roster}
-            settings={settings}
-            send={socket.send}
-            connected={socket.status === "open" && classroom.status === "live"}
-          />
+          <div className="space-y-6">
+            <TeamTab
+              students={students}
+              boards={teamBoards}
+              presenter={presenter}
+              roster={roster}
+              settings={settings}
+              send={socket.send}
+              connected={socket.status === "open" && classroom.status === "live"}
+            />
+            <ToolboxTab
+              tools={tools}
+              students={students}
+              roster={roster}
+              send={socket.send}
+              connected={socket.status === "open" && classroom.status === "live"}
+            />
+          </div>
         ) : null}
-        {tab === "board" ? (
-          <BoardTab board={board} send={socket.send} connected={socket.status === "open" && classroom.status === "live"} />
-        ) : null}
-        {tab === "padlet" ? (
-          <PadletTab send={socket.send} connected={socket.status === "open" && classroom.status === "live"} />
-        ) : null}
-        {tab === "share" ? <ScreenShareTab students={students} share={screenShare} /> : null}
         {tab === "settings" ? (
-          <SettingsTab
-            settings={settings}
-            send={socket.send}
-            connected={socket.status === "open" && classroom.status === "live"}
-          />
-        ) : null}
-        {tab === "events" ? (
-          <EventsTab
-            events={events}
-            students={students}
-            classroomId={classroom.id}
-            onRefresh={refreshState}
-          />
+          <div className="space-y-6">
+            <SettingsTab
+              settings={settings}
+              send={socket.send}
+              connected={socket.status === "open" && classroom.status === "live"}
+            />
+            <EventsTab
+              events={events}
+              students={students}
+              classroomId={classroom.id}
+              onRefresh={refreshState}
+            />
+          </div>
         ) : null}
       </div>
 
