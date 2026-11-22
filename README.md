@@ -124,6 +124,24 @@ bun run preview      # 0.0.0.0:8000 (앱 + /api 프록시)
 > Windows 보안 → 방화벽 및 네트워크 보호 → **앱이 방화벽을 통과하도록 허용** → `Node.js`의
 > **개인 네트워크**를 체크하세요. 같은 와이파이에 있는지도 확인합니다.
 
+### 인터넷에 배포 (Cloudflare Pages + Workers)
+
+실시간 수업방은 **Durable Objects**를 쓰기 때문에 Pages Functions에 직접 바인딩할 수 없습니다.
+그래서 이 저장소는 **Pages = 정적 파일 + `/api/*` 프록시**, **Workers = API/WebSocket** 구조로 배포합니다.
+
+```
+브라우저 → https://all-in-one-class.pages.dev      (React 번들, CDN)
+         → /api/* ─ functions/api/[[path]].ts ─→ https://aic.<계정>.workers.dev  (D1 + Durable Objects)
+```
+
+- 프록시가 `Origin`을 Worker 주소로 맞춰 주므로 same-origin 검사·쿠키·WebSocket이 브라우저에서는
+  모두 한 주소처럼 동작합니다.
+- Worker 배포: `wrangler deploy` (D1 `aic-db`, DO `ClassroomHub`, 시크릿 `TEACHER_PASSWORD`·
+  `SESSION_SECRET`·`TEACHER_NAME`).
+- Pages 배포: `vite build` 후
+  `wrangler pages deploy dist/client --project-name all-in-one-class --branch main`.
+- Pages 프로젝트 이름을 바꾸면 `functions/api/[[path]].ts`의 `API_ORIGIN`만 맞춰 주면 됩니다.
+
 ### 처음 확인하는 순서
 
 0. 앱 안의 **기능 안내**(`/app/guide`)에 열 개 탭과 학생 화면 기능, 배포 전 설정 목록이

@@ -18,7 +18,7 @@
     {
       "binding": "DB",
       "database_name": "aic-db",
-      "database_id": "00000000-0000-0000-0000-000000000000",
+      "database_id": "1ecd06bd-acf0-4141-bf24-61a1fe6c5491",
       "migrations_dir": "database/migrations"
     }
   ],
